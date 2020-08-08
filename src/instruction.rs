@@ -349,7 +349,6 @@ pub mod instruction_func {
         let operand = match *mode {
             _ => panic!("Unsupported addressing mode {:?} for ADC", operand);
         };
-        
 
         let (result_temp, carry1) = cpu.a.overflowing_add(operand);
         let (result, carry2) = result_temp.overflowing_add(cpu.p.c as u8);
