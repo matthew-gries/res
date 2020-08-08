@@ -1,4 +1,5 @@
 use crate::instruction::Instruction;
+use crate::instruction::instruction_func;
 use crate::instruction::INSTRUCTION_TABLE;
 use crate::memory::Memory;
 
@@ -66,16 +67,30 @@ impl CPU {
     }
 
     /// Get the byte at the PC and increment the PC by 1
-    pub fn get_byte_and_increment(&mut self, memory: &Memory) -> u8 {
+    pub fn read_byte_and_increment(&mut self, memory: &Memory) -> u8 {
         let byte = memory.read(self.pc);
         self.pc += 1;
         byte
     }
 
-    /// Fetch the current instruction in memory
-    pub fn fetch_instruction(&mut self, memory: &Memory) -> Option<&Instruction> {
-        let opcode = self.get_byte_and_increment(memory);
+    /// Perform one fetch-decode-execute cycle
+    pub fn instruction_cycle(&mut self, memory: &Memory) -> Result<(), String> {
+        let opcode = self.read_byte_and_increment(memory);
         let instr = INSTRUCTION_TABLE.get(&opcode);
-        instr
+
+        let instr = match instr {
+            Some(i) => i,
+            None => {
+                return Err(format!("Invalid opcode {} was given!", opcode).to_string());
+            }
+        };
+
+        match instr {
+            Instruction::ADC(mode, len, time) => instruction_func::adc(self, memory, mode, *len, *time),
+            _ => panic!("{:?} has not been implemented!")
+        }
+
+        Ok(())
     }
+
 }

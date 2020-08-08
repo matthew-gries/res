@@ -3,8 +3,9 @@ use crate::memory::Memory;
 
 use std::collections::HashMap;
 
+#[derive(Debug)]
 pub enum AddressingMode {
-    ZeroPage,
+    ZeroPage, // the address in zero page (high byte is 00)
     ZeroPageX,
     ZeroPageY,
     Absolute,
@@ -13,10 +14,81 @@ pub enum AddressingMode {
     Indirect,
     Implied,
     Accumulator,
-    Immediate,
+    Immediate, // the literal byte in memory is the operand
     Relative,
     IndexedIndirect, // Indirect, X
     IndirectIndexed // Indirect, Y
+}
+
+pub fn get_operand_using_addr_mode(mode: &AddressingMode, cpu: &CPU, memory: &Memory) -> u8 {
+
+    match *mode {
+        AddressingMode::Immediate => {
+            cpu.read_byte_and_increment(memory) 
+        },
+        AddressingMode::ZeroPage => {
+            let addr = cpu.read_byte_and_increment(memory); 
+            memory.read(addr as u16)
+        },
+        AddressingMode::ZeroPageX => {
+            let addr = cpu.read_byte_and_increment(memory);
+            let (addr, _) = addr.overflowing_add(cpu.x);
+            memory.read(addr as u16)
+        },
+        AddressingMode::ZeroPageY => {
+            let addr = cpu.read_byte_and_increment(memory);
+            let (addr, _) = addr.overflowing_add(cpu.y);
+            memory.read(addr as u16)
+        },
+        AddressingMode::Absolute => {
+            let low_byte = cpu.read_byte_and_increment(memory);
+            let high_byte = cpu.read_byte_and_increment(memory);
+            let addr = ((high_byte as u16) << 8) | low_byte as u16;
+            memory.read(addr)
+        },
+        AddressingMode::AbsoluteX => {
+            let low_byte = cpu.read_byte_and_increment(memory);
+            let high_byte = cpu.read_byte_and_increment(memory);
+            let addr = ((high_byte as u16) << 8) | low_byte as u16;
+            let (addr, _) = addr.overflowing_add(cpu.x as u16);
+            memory.read(addr)
+        },
+        AddressingMode::AbsoluteY => {
+            let low_byte = cpu.read_byte_and_increment(memory);
+            let high_byte = cpu.read_byte_and_increment(memory);
+            let addr = ((high_byte as u16) << 8) | low_byte as u16;
+            let (addr, _) = addr.overflowing_add(cpu.y as u16);
+            memory.read(addr)
+        },
+        AddressingMode::Indirect => {
+            let low_byte = cpu.read_byte_and_increment(memory);
+            let high_byte = cpu.read_byte_and_increment(memory);
+            let addr = ((high_byte as u16) << 8) | low_byte as u16;
+            memory.read(addr)
+        },
+        AddressingMode::Implied | AddressingMode::Accumulator => 0,
+        AddressingMode::Relative => {
+            cpu.read_byte_and_increment(memory) 
+        },
+        AddressingMode::IndexedIndirect => {
+            let addr = cpu.read_byte_and_increment(memory);
+            let (low_byte_addr, _) = addr.overflowing_add(cpu.x);
+            let (high_byte_addr, _) = low_byte_addr.overflowing_add(1);
+            let low_byte = memory.read(low_byte_addr as u16);
+            let high_byte = memory.read(high_byte_addr as u16);
+            let addr = ((high_byte as u16) << 8) | low_byte as u16;
+            memory.read(addr)
+        },
+        AddressingMode::IndirectIndexed => {
+            let low_byte_addr = cpu.read_byte_and_increment(memory);
+            let (high_byte_addr, _) = low_byte_addr.overflowing_add(1);
+            let low_byte = memory.read(low_byte_addr as u16);
+            let high_byte = memory.read(high_byte_addr as u16);
+            let addr = ((high_byte as u16) << 8) | low_byte as u16;
+            let (addr, _) = addr.overflowing_add(cpu.y as u16);
+            memory.read(addr)
+        }
+    }
 }
 
 lazy_static! {
@@ -208,6 +280,7 @@ lazy_static! {
     };
 }
 
+#[derive(Debug)]
 pub enum Instruction {
     ADC(AddressingMode, usize, usize),
     AND(AddressingMode, usize, usize),
@@ -274,10 +347,7 @@ pub mod instruction_func {
     pub fn adc(cpu: &mut CPU, memory: &Memory, mode: &AddressingMode, len: usize, time: usize) {
 
         let operand = match *mode {
-            AddressingMode::Immediate => {
-                cpu.get_byte_and_increment(memory)
-            }
-            _ => 0
+            _ => panic!("Unsupported addressing mode {:?} for ADC", operand);
         };
         
 
