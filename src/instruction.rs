@@ -395,4 +395,3 @@ pub mod instruction_func {
         cycles
     }
 }
-
