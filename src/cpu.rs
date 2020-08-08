@@ -1,3 +1,6 @@
+use crate::instruction::Instruction;
+use crate::instruction::INSTRUCTION_TABLE;
+use crate::memory::Memory;
 
 /// Structure for handling the status register
 pub struct StatusRegister {
@@ -37,13 +40,13 @@ impl StatusRegister {
     }
 
     pub fn from_u8(&mut self, flags: u8) {
-	self.c = (flags & 0b1u8) as bool;
-	self.z = (flags & 0b10u8) as bool;
-	self.i = (flags & 0b100u8) as bool;
-	self.d = (flags & 0b1000u8) as bool;
-	self.b = (flags & 0b10000u8) as bool;
-	self.v = (flags & 0b1000000u8) as bool;
-	self.n = (flags & 0b10000000u8) as bool;
+	self.c = (flags & 0b1u8) != 0;
+	self.z = (flags & 0b10u8) != 0;
+	self.i = (flags & 0b100u8) != 0;
+	self.d = (flags & 0b1000u8) != 0;
+	self.b = (flags & 0b10000u8) != 0;
+	self.v = (flags & 0b1000000u8) != 0;
+	self.n = (flags & 0b10000000u8) != 0;
     }
 }
 
@@ -61,5 +64,19 @@ impl CPU {
 
     pub fn new() -> Self {
 	CPU{a: 0, x:0, y: 0, sp: 0, pc: 0, p: StatusRegister::new()}
+    }
+
+    /// Get the byte at the PC and increment the PC by 1
+    pub fn get_byte_and_increment(&mut self, memory: &Memory) -> u8 {
+	let byte = memory.read(self.pc);
+	self.pc += 1;
+	byte
+    }
+
+    /// Fetch the current instruction in memory
+    pub fn fetch_instruction(&mut self, memory: &Memory) -> Option<&Instruction> {
+	let opcode = self.get_byte_and_increment(memory);
+	let instr = INSTRUCTION_TABLE.get(&opcode);
+	instr
     }
 }
