@@ -20,55 +20,70 @@ pub enum AddressingMode {
     IndirectIndexed // Indirect, Y
 }
 
-pub fn get_operand_using_addr_mode(mode: &AddressingMode, cpu: &CPU, memory: &Memory) -> u8 {
+/// Get the operand given the addressing mode, as well as the number of extra cycles if necessary
+pub fn get_operand_using_addr_mode(mode: &AddressingMode, cpu: &mut CPU, memory: &Memory) -> (u8, usize) {
 
     match *mode {
         AddressingMode::Immediate => {
-            cpu.read_byte_and_increment(memory) 
+            (cpu.read_byte_and_increment(memory), 0)
         },
         AddressingMode::ZeroPage => {
             let addr = cpu.read_byte_and_increment(memory); 
-            memory.read(addr as u16)
+            (memory.read(addr as u16), 0)
         },
         AddressingMode::ZeroPageX => {
             let addr = cpu.read_byte_and_increment(memory);
             let (addr, _) = addr.overflowing_add(cpu.x);
-            memory.read(addr as u16)
+            (memory.read(addr as u16), 0)
         },
         AddressingMode::ZeroPageY => {
             let addr = cpu.read_byte_and_increment(memory);
             let (addr, _) = addr.overflowing_add(cpu.y);
-            memory.read(addr as u16)
+            (memory.read(addr as u16), 0)
         },
         AddressingMode::Absolute => {
             let low_byte = cpu.read_byte_and_increment(memory);
             let high_byte = cpu.read_byte_and_increment(memory);
             let addr = ((high_byte as u16) << 8) | low_byte as u16;
-            memory.read(addr)
+            (memory.read(addr), 0)
         },
         AddressingMode::AbsoluteX => {
             let low_byte = cpu.read_byte_and_increment(memory);
             let high_byte = cpu.read_byte_and_increment(memory);
-            let addr = ((high_byte as u16) << 8) | low_byte as u16;
-            let (addr, _) = addr.overflowing_add(cpu.x as u16);
-            memory.read(addr)
+            let addr_old = ((high_byte as u16) << 8) | low_byte as u16;
+            let (addr, _) = addr_old.overflowing_add(cpu.x as u16);
+            let cycles = {
+                if Memory::check_if_page_crossed(addr_old, addr) {
+                    1
+                } else {
+                    0
+                }
+            };
+            (memory.read(addr), cycles)
         },
         AddressingMode::AbsoluteY => {
             let low_byte = cpu.read_byte_and_increment(memory);
             let high_byte = cpu.read_byte_and_increment(memory);
-            let addr = ((high_byte as u16) << 8) | low_byte as u16;
-            let (addr, _) = addr.overflowing_add(cpu.y as u16);
-            memory.read(addr)
+            let addr_old = ((high_byte as u16) << 8) | low_byte as u16;
+            let (addr, _) = addr_old.overflowing_add(cpu.y as u16);
+            let cycles = {
+                if Memory::check_if_page_crossed(addr_old, addr) {
+                    1
+                } else {
+                    0
+                }
+            };
+            (memory.read(addr), cycles)
         },
         AddressingMode::Indirect => {
             let low_byte = cpu.read_byte_and_increment(memory);
             let high_byte = cpu.read_byte_and_increment(memory);
             let addr = ((high_byte as u16) << 8) | low_byte as u16;
-            memory.read(addr)
+            (memory.read(addr), 0)
         },
-        AddressingMode::Implied | AddressingMode::Accumulator => 0,
+        AddressingMode::Implied | AddressingMode::Accumulator => (0, 0),
         AddressingMode::Relative => {
-            cpu.read_byte_and_increment(memory) 
+            (cpu.read_byte_and_increment(memory) , 0)
         },
         AddressingMode::IndexedIndirect => {
             let addr = cpu.read_byte_and_increment(memory);
@@ -77,16 +92,23 @@ pub fn get_operand_using_addr_mode(mode: &AddressingMode, cpu: &CPU, memory: &Me
             let low_byte = memory.read(low_byte_addr as u16);
             let high_byte = memory.read(high_byte_addr as u16);
             let addr = ((high_byte as u16) << 8) | low_byte as u16;
-            memory.read(addr)
+            (memory.read(addr), 0)
         },
         AddressingMode::IndirectIndexed => {
             let low_byte_addr = cpu.read_byte_and_increment(memory);
             let (high_byte_addr, _) = low_byte_addr.overflowing_add(1);
             let low_byte = memory.read(low_byte_addr as u16);
             let high_byte = memory.read(high_byte_addr as u16);
-            let addr = ((high_byte as u16) << 8) | low_byte as u16;
-            let (addr, _) = addr.overflowing_add(cpu.y as u16);
-            memory.read(addr)
+            let addr_old = ((high_byte as u16) << 8) | low_byte as u16;
+            let (addr, _) = addr_old.overflowing_add(cpu.y as u16);
+            let cycles = {
+                if Memory::check_if_page_crossed(addr_old, addr) {
+                    1
+                } else {
+                    0
+                }
+            };
+            (memory.read(addr), cycles)
         }
     }
 }
@@ -344,18 +366,33 @@ pub mod instruction_func {
 
     use super::*;
 
-    pub fn adc(cpu: &mut CPU, memory: &Memory, mode: &AddressingMode, len: usize, time: usize) {
+    /// Run an ADC instruction and return the number of cycles it took to complete the instruction
+    pub fn adc(cpu: &mut CPU, memory: &Memory, mode: &AddressingMode, len: usize, time: usize) -> usize {
 
-        let operand = match *mode {
-            _ => panic!("Unsupported addressing mode {:?} for ADC", operand);
+        let (operand, extra_cycles) = match *mode {
+            AddressingMode::Immediate | AddressingMode::ZeroPage | AddressingMode::ZeroPageX
+            | AddressingMode::Absolute | AddressingMode::AbsoluteX | AddressingMode::AbsoluteY
+            | AddressingMode::IndexedIndirect | AddressingMode::IndirectIndexed =>
+                get_operand_using_addr_mode(mode, cpu, memory),
+            _ => panic!("Unsupported addressing mode {:?} for ADC", *mode),
         };
 
         let (result_temp, carry1) = cpu.a.overflowing_add(operand);
         let (result, carry2) = result_temp.overflowing_add(cpu.p.c as u8);
         let carry_bit = carry1 || carry2;
 
-        cpu.a = result;
+        cpu.p.z = result == 0;
         cpu.p.c = carry_bit;
+        cpu.p.n = CPU::check_if_neg(result);
+        // using overflowing_add on an unsigned 8-bit checks for overflow in bit 7, and as such works as the carry
+        // bit. We need to use the value of A and the operand and compare to the result to see if there is signed
+        // overflow (an invalid two's complement result)
+        let (_, signed_overflow) = (cpu.a as i8).overflowing_add(operand as i8); // TODO: is this the best way to do this?
+        cpu.p.v = signed_overflow;
+
+        cpu.a = result;
+        let cycles = time + extra_cycles;
+        cycles
     }
 }
 

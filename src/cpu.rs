@@ -66,6 +66,10 @@ impl CPU {
         CPU{a: 0, x:0, y: 0, sp: 0, pc: 0, p: StatusRegister::new()}
     }
 
+    pub fn check_if_neg(val: u8) -> bool {
+        (val >> 7) == 1
+    }
+
     /// Get the byte at the PC and increment the PC by 1
     pub fn read_byte_and_increment(&mut self, memory: &Memory) -> u8 {
         let byte = memory.read(self.pc);
@@ -85,9 +89,14 @@ impl CPU {
             }
         };
 
-        match instr {
+        let mut cycles = match instr {
             Instruction::ADC(mode, len, time) => instruction_func::adc(self, memory, mode, *len, *time),
             _ => panic!("{:?} has not been implemented!")
+        };
+
+        // loop the number of cycles it took to complete the instruction
+        while cycles != 0 {
+            cycles -= 1;
         }
 
         Ok(())
