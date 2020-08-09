@@ -50,6 +50,10 @@ impl StatusRegister {
     }
 }
 
+/// The memory page in which the stack is located. The stack is located from
+/// 0x0100 to 0x01FF
+const STACK_MEMORY_PAGE: u16 = 0x0100;
+
 /// Structure to represent the CPU of the system
 pub struct CPU {
     pub a: u8,
@@ -62,10 +66,41 @@ pub struct CPU {
 
 impl CPU {
 
+    /// Create a new CPU with all fields zeroed
     pub fn new() -> Self {
         CPU{a: 0, x:0, y: 0, sp: 0, pc: 0, p: StatusRegister::new()}
     }
 
+    /// Setup the CPU for use in the NES system (including setting the stack pointer)
+    pub fn init(&mut self) -> &Self {
+        self.sp = 0xFF;
+        self
+    }
+
+    /// Push a value onto the stack
+    pub fn push_stack(&mut self, memory: &mut Memory, val: u8) -> &Self {
+        let stack_addr = STACK_MEMORY_PAGE + self.sp as u16;
+        memory.write(stack_addr, val);
+        let (new_stack_addr, underflowed) = self.sp.overflowing_sub(1);
+        self.sp = new_stack_addr;
+        if underflowed {
+            log::warn!("Stack underflow detected");
+        }
+        self
+    }
+
+    /// Retrieve the value at the top of the stack
+    pub fn pop_stack(&mut self, memory: &mut Memory) -> u8 {
+        let (new_stack_addr, overflowed) = self.sp.overflowing_add(1);
+        self.sp = new_stack_addr;
+        if overflowed {
+            log::warn!("Stack overflow detected");
+        }
+        let stack_addr = STACK_MEMORY_PAGE + self.sp as u16;
+        memory.read(stack_addr) // value at the address is NOT deleted when SP moves
+    }
+
+    /// Check if the given unsigned value is negative in two's complement
     pub fn check_if_neg(val: u8) -> bool {
         (val >> 7) == 1
     }
