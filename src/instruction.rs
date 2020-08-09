@@ -76,8 +76,15 @@ pub fn get_operand_using_addr_mode(mode: &AddressingMode, cpu: &mut CPU, memory:
             (addr, cycles)
         },
         AddressingMode::Indirect => {
-            let low_byte = cpu.read_byte_and_increment(memory);
-            let high_byte = cpu.read_byte_and_increment(memory);
+            let low_byte_ind = cpu.read_byte_and_increment(memory);
+            let high_byte_ind = cpu.read_byte_and_increment(memory);
+            if low_byte_ind == 0xFF {
+                log::warn!("Low-byte of indirect vector landed at end of page!");
+            }
+            let addr_ind = ((high_byte_ind as u16) << 8) | low_byte_ind as u16;
+
+            let low_byte = memory.read(addr_ind);
+            let high_byte = memory.read(addr_ind.overflowing_add(1).0);
             let addr = ((high_byte as u16) << 8) | low_byte as u16;
             (addr, 0)
         },
@@ -677,6 +684,19 @@ pub mod instruction_func {
 
         cpu.p.n = CPU::check_if_neg(cpu.y);
         cpu.p.z = cpu.y == 0;
+
+        time
+    }
+
+    pub fn jmp(cpu: &mut CPU, memory: &Memory, mode: &AddressingMode, time: usize) -> usize {
+
+        let (operand, _) = match *mode {
+            AddressingMode::Absolute | AddressingMode::Indirect =>
+                get_operand_using_addr_mode(mode, cpu, memory),
+            _ => panic!("Unsupported addressing mod {:?} for JMP", *mode),
+        };
+
+        cpu.pc = operand;
 
         time
     }
@@ -1640,6 +1660,40 @@ mod tests {
             assert_eq!(cycles, 2);
             assert_eq!(cpu.p.z, false);
             assert_eq!(cpu.p.n, false);
+        } else {
+            panic!("Wrong instruction, got {:?}", instr);
+        }
+    }
+
+    #[test]
+    fn jmp_abs_test() {
+        let (mut cpu, mut mem) = generate_cpu_and_mem();
+        mem.write(0, 0x4C);
+        mem.write(1, 0x40);
+        mem.write(2, 0x01);
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        if let Instruction::JMP(mode, time) = instr {
+            let cycles = instruction_func::jmp(&mut cpu, &mem, mode, *time);
+            assert_eq!(cpu.pc, 0x0140);
+            assert_eq!(cycles, 3);
+        } else {
+            panic!("Wrong instruction, got {:?}", instr);
+        }
+    }
+
+    #[test]
+    fn jmp_ind_test() {
+        let (mut cpu, mut mem) = generate_cpu_and_mem();
+        mem.write(0x03FE, 0x40);
+        mem.write(0x03FF, 0x01);
+        mem.write(0, 0x6C);
+        mem.write(1, 0xFE);
+        mem.write(2, 0x03);
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        if let Instruction::JMP(mode, time) = instr {
+            let cycles = instruction_func::jmp(&mut cpu, &mem, mode, *time);
+            assert_eq!(cpu.pc, 0x0140);
+            assert_eq!(cycles, 5);
         } else {
             panic!("Wrong instruction, got {:?}", instr);
         }

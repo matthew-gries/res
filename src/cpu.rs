@@ -106,6 +106,7 @@ impl CPU {
             Instruction::INC(mode, time) => instruction_func::inc(self, memory, mode, *time),
             Instruction::INX(mode, time) => instruction_func::inx(self, memory, mode, *time),
             Instruction::INY(mode, time) => instruction_func::iny(self, memory, mode, *time),
+            Instruction::JMP(mode, time) => instruction_func::jmp(self, memory, mode, *time),
             Instruction::LDA(mode, time) => instruction_func::lda(self, memory, mode, *time),
             Instruction::LDX(mode, time) => instruction_func::ldx(self, memory, mode, *time),
             Instruction::LDY(mode, time) => instruction_func::ldy(self, memory, mode, *time),
