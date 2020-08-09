@@ -21,31 +21,31 @@ pub enum AddressingMode {
 }
 
 /// Get the operand given the addressing mode, as well as the number of extra cycles if necessary
-pub fn get_operand_using_addr_mode(mode: &AddressingMode, cpu: &mut CPU, memory: &Memory) -> (u8, usize) {
+pub fn get_operand_using_addr_mode(mode: &AddressingMode, cpu: &mut CPU, memory: &Memory) -> (u16, usize) {
 
     match *mode {
         AddressingMode::Immediate => {
-            (cpu.read_byte_and_increment(memory), 0)
+            (cpu.read_byte_and_increment(memory) as u16, 0)
         },
         AddressingMode::ZeroPage => {
             let addr = cpu.read_byte_and_increment(memory);
-            (memory.read(addr as u16), 0)
+            (addr as u16, 0)
         },
         AddressingMode::ZeroPageX => {
             let addr = cpu.read_byte_and_increment(memory);
             let (addr, _) = addr.overflowing_add(cpu.x);
-            (memory.read(addr as u16), 0)
+            (addr as u16, 0)
         },
         AddressingMode::ZeroPageY => {
             let addr = cpu.read_byte_and_increment(memory);
             let (addr, _) = addr.overflowing_add(cpu.y);
-            (memory.read(addr as u16), 0)
+            (addr as u16, 0)
         },
         AddressingMode::Absolute => {
             let low_byte = cpu.read_byte_and_increment(memory);
             let high_byte = cpu.read_byte_and_increment(memory);
             let addr = ((high_byte as u16) << 8) | low_byte as u16;
-            (memory.read(addr), 0)
+            (addr, 0)
         },
         AddressingMode::AbsoluteX => {
             let low_byte = cpu.read_byte_and_increment(memory);
@@ -59,7 +59,7 @@ pub fn get_operand_using_addr_mode(mode: &AddressingMode, cpu: &mut CPU, memory:
                     0
                 }
             };
-            (memory.read(addr), cycles)
+            (addr, cycles)
         },
         AddressingMode::AbsoluteY => {
             let low_byte = cpu.read_byte_and_increment(memory);
@@ -73,17 +73,17 @@ pub fn get_operand_using_addr_mode(mode: &AddressingMode, cpu: &mut CPU, memory:
                     0
                 }
             };
-            (memory.read(addr), cycles)
+            (addr, cycles)
         },
         AddressingMode::Indirect => {
             let low_byte = cpu.read_byte_and_increment(memory);
             let high_byte = cpu.read_byte_and_increment(memory);
             let addr = ((high_byte as u16) << 8) | low_byte as u16;
-            (memory.read(addr), 0)
+            (addr, 0)
         },
         AddressingMode::Implied | AddressingMode::Accumulator => (0, 0),
         AddressingMode::Relative => {
-            (cpu.read_byte_and_increment(memory) , 0)
+            (cpu.read_byte_and_increment(memory) as u16 , 0)
         },
         AddressingMode::IndexedIndirect => {
             let addr = cpu.read_byte_and_increment(memory);
@@ -92,7 +92,7 @@ pub fn get_operand_using_addr_mode(mode: &AddressingMode, cpu: &mut CPU, memory:
             let low_byte = memory.read(low_byte_addr as u16);
             let high_byte = memory.read(high_byte_addr as u16);
             let addr = ((high_byte as u16) << 8) | low_byte as u16;
-            (memory.read(addr), 0)
+            (addr, 0)
         },
         AddressingMode::IndirectIndexed => {
             let low_byte_addr = cpu.read_byte_and_increment(memory);
@@ -108,7 +108,7 @@ pub fn get_operand_using_addr_mode(mode: &AddressingMode, cpu: &mut CPU, memory:
                     0
                 }
             };
-            (memory.read(addr), cycles)
+            (addr, cycles)
         }
     }
 }
@@ -367,7 +367,7 @@ pub mod instruction_func {
     use super::*;
 
     /// Run an ADC instruction and return the number of cycles it took to complete the instruction
-    pub fn adc(cpu: &mut CPU, memory: &Memory, mode: &AddressingMode, len: usize, time: usize) -> usize {
+    pub fn adc(cpu: &mut CPU, memory: &Memory, mode: &AddressingMode, time: usize) -> usize {
 
         let (operand, extra_cycles) = match *mode {
             AddressingMode::Immediate | AddressingMode::ZeroPage | AddressingMode::ZeroPageX
@@ -377,7 +377,16 @@ pub mod instruction_func {
             _ => panic!("Unsupported addressing mode {:?} for ADC", *mode),
         };
 
-        let (result_temp, carry1) = cpu.a.overflowing_add(operand);
+        let op = {
+            if let AddressingMode::Immediate = *mode {
+                operand as u8
+            } else {
+                memory.read(operand)
+            }
+        };
+
+        let (result_temp, carry1) = cpu.a.overflowing_add(op);
+
         let (result, carry2) = result_temp.overflowing_add(cpu.p.c as u8);
         let carry_bit = carry1 || carry2;
 
@@ -387,7 +396,7 @@ pub mod instruction_func {
         // using overflowing_add on an unsigned 8-bit checks for overflow in bit 7, and as such works as the carry
         // bit. We need to use the value of A and the operand and compare to the result to see if there is signed
         // overflow (an invalid two's complement result)
-        let (_, signed_overflow) = (cpu.a as i8).overflowing_add(operand as i8); // TODO: is this the best way to do this?
+        let (_, signed_overflow) = (cpu.a as i8).overflowing_add(op as i8); // TODO: is this the best way to do this?
         cpu.p.v = signed_overflow;
 
         cpu.a = result;
@@ -395,7 +404,7 @@ pub mod instruction_func {
         cycles
     }
 
-    pub fn lda(cpu: &mut CPU, memory: &Memory, mode: &AddressingMode, len: usize, time: usize) -> usize {
+    pub fn lda(cpu: &mut CPU, memory: &Memory, mode: &AddressingMode, time: usize) -> usize {
 
         let (operand, extra_cycles) = match *mode {
             AddressingMode::Immediate | AddressingMode::ZeroPage | AddressingMode::ZeroPageX
@@ -405,10 +414,86 @@ pub mod instruction_func {
             _ => panic!("Unsupported addressing mode {:?} for LDA", *mode),
         };
 
-        cpu.a = operand;
+        let result = {
+            if let AddressingMode::Immediate = *mode {
+                operand as u8
+            } else {
+                memory.read(operand)
+            }
+        };
 
-        cpu.p.n =  CPU::check_if_neg(operand);
+        cpu.a = result;
+
+        cpu.p.n =  CPU::check_if_neg(result);
         cpu.p.z = operand == 0;
+
+        let cycles = time + extra_cycles;
+        cycles
+    }
+
+    pub fn ldx(cpu: &mut CPU, memory: &Memory, mode: &AddressingMode, time: usize) -> usize {
+
+        let (operand, extra_cycles) = match *mode {
+            AddressingMode::Immediate | AddressingMode::ZeroPage | AddressingMode::ZeroPageY
+            | AddressingMode::Absolute | AddressingMode::AbsoluteY =>
+                get_operand_using_addr_mode(mode, cpu, memory),
+            _ => panic!("Unsupported addressing mode {:?} for LDX", *mode),
+        };
+
+        let result = {
+            if let AddressingMode::Immediate = *mode {
+                operand as u8
+            } else {
+                memory.read(operand)
+            }
+        };
+
+        cpu.x = result;
+
+        cpu.p.n =  CPU::check_if_neg(result);
+        cpu.p.z = operand == 0;
+
+        let cycles = time + extra_cycles;
+        cycles
+    }
+
+    pub fn ldy(cpu: &mut CPU, memory: &Memory, mode: &AddressingMode, time: usize) -> usize {
+
+        let (operand, extra_cycles) = match *mode {
+            AddressingMode::Immediate | AddressingMode::ZeroPage | AddressingMode::ZeroPageX
+            | AddressingMode::Absolute | AddressingMode::AbsoluteX =>
+                get_operand_using_addr_mode(mode, cpu, memory),
+            _ => panic!("Unsupported addressing mode {:?} for LDY", *mode),
+        };
+
+        let result = {
+            if let AddressingMode::Immediate = *mode {
+                operand as u8
+            } else {
+                memory.read(operand)
+            }
+        };
+
+        cpu.y = result;
+
+        cpu.p.n =  CPU::check_if_neg(result);
+        cpu.p.z = operand == 0;
+
+        let cycles = time + extra_cycles;
+        cycles
+    }
+
+    pub fn sta(cpu: &mut CPU, memory: &mut Memory, mode: &AddressingMode, time: usize) -> usize {
+        
+        let (operand, extra_cycles) = match *mode {
+            AddressingMode::ZeroPage | AddressingMode::ZeroPageX | AddressingMode::Absolute
+            | AddressingMode::AbsoluteX | AddressingMode::AbsoluteY | AddressingMode::IndexedIndirect
+            | AddressingMode::IndirectIndexed =>
+                get_operand_using_addr_mode(mode, cpu, memory),
+            _ => panic!("Unsupported addressing mode {:?} for STA", *mode)
+        };
+
+        memory.write(operand, cpu.a);
 
         let cycles = time + extra_cycles;
         cycles
@@ -424,16 +509,400 @@ mod tests {
     }
 
     #[test]
-    fn lda_test() {
+    fn ldx_imm_test() {
+        let (mut cpu, mut mem) = generate_cpu_and_mem();
+        mem.write(0, 0xA2);
+        mem.write(1, 0x44);
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        if let Instruction::LDX(mode, _, time) = instr {
+            let cycles = instruction_func::ldx(&mut cpu, &mem, mode, *time);
+            assert_eq!(cpu.x, 0x44);
+            assert_eq!(cycles, 2);
+            assert_eq!(cpu.p.z, false);
+            assert_eq!(cpu.p.n, false);
+        } else {
+            panic!("Wrong instruction, got {:?}", instr);
+        }
+    }
+
+    #[test]
+    fn ldx_zp_test() {
+        let (mut cpu, mut mem) = generate_cpu_and_mem();
+        mem.write(0x0040, 0x44);  // M[0x0040] <- 0x44
+        mem.write(0, 0xA6);
+        mem.write(1, 0x40);
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        if let Instruction::LDX(mode, _, time) = instr {
+            let cycles = instruction_func::ldx(&mut cpu, &mem, mode, *time);
+            assert_eq!(cpu.x, 0x44);
+            assert_eq!(cycles, 3);
+            assert_eq!(cpu.p.z, false);
+            assert_eq!(cpu.p.n, false);
+        } else {
+            panic!("Wrong instruction, got {:?}", instr);
+        }
+    }
+
+    #[test]
+    fn ldx_zpy_test() {
+        let (mut cpu, mut mem) = generate_cpu_and_mem();
+        mem.write(0x0040, 0x44);  // M[0x0040] <- 0x44
+        mem.write(0, 0xB6);
+        mem.write(1, 0x3F);
+        cpu.y = 1;
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        if let Instruction::LDX(mode, _, time) = instr {
+            let cycles = instruction_func::ldx(&mut cpu, &mem, mode, *time);
+            assert_eq!(cpu.x, 0x44);
+            assert_eq!(cycles, 4);
+            assert_eq!(cpu.p.z, false);
+            assert_eq!(cpu.p.n, false);
+        } else {
+            panic!("Wrong instruction, got {:?}", instr);
+        }
+    }
+
+    #[test]
+    fn ldx_abs_test() {
+        let (mut cpu, mut mem) = generate_cpu_and_mem();
+        mem.write(0x0140, 0x44);
+        mem.write(0, 0xAE);
+        mem.write(1, 0x40);
+        mem.write(2, 0x01);
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        if let Instruction::LDX(mode, _, time) = instr {
+            let cycles = instruction_func::ldx(&mut cpu, &mem, mode, *time);
+            assert_eq!(cpu.x, 0x44);
+            assert_eq!(cycles, 4);
+            assert_eq!(cpu.p.z, false);
+            assert_eq!(cpu.p.n, false);
+        } else {
+            panic!("Wrong instruction, got {:?}", instr);
+        }
+    }
+
+    #[test]
+    fn ldx_absy_test_same_page() {
+        let (mut cpu, mut mem) = generate_cpu_and_mem();
+        mem.write(0x0140, 0x44);
+        mem.write(0, 0xBE);
+        mem.write(1, 0x3F);
+        mem.write(2, 0x01);
+        cpu.y = 0x01;
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        if let Instruction::LDX(mode, _, time) = instr {
+            let cycles = instruction_func::ldx(&mut cpu, &mem, mode, *time);
+            assert_eq!(cpu.x, 0x44);
+            assert_eq!(cycles, 4);
+            assert_eq!(cpu.p.z, false);
+            assert_eq!(cpu.p.n, false);
+        } else {
+            panic!("Wrong instruction, got {:?}", instr);
+        }
+    }
+
+    #[test]
+    fn ldx_absy_test_diff_page() {
+        let (mut cpu, mut mem) = generate_cpu_and_mem();
+        mem.write(0x0140, 0x44);
+        mem.write(0, 0xBE);
+        mem.write(1, 0xC1);
+        mem.write(2, 0x00);
+        cpu.y = 0x7F;
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        if let Instruction::LDX(mode, _, time) = instr {
+            let cycles = instruction_func::ldx(&mut cpu, &mem, mode, *time);
+            assert_eq!(cpu.x, 0x44);
+            assert_eq!(cycles, 5);
+            assert_eq!(cpu.p.z, false);
+            assert_eq!(cpu.p.n, false);
+        } else {
+            panic!("Wrong instruction, got {:?}", instr);
+        }
+    }
+
+    #[test]
+    fn ldy_imm_test() {
+        let (mut cpu, mut mem) = generate_cpu_and_mem();
+        mem.write(0, 0xA0);
+        mem.write(1, 0x44);
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        if let Instruction::LDY(mode, _, time) = instr {
+            let cycles = instruction_func::ldy(&mut cpu, &mem, mode, *time);
+            assert_eq!(cpu.y, 0x44);
+            assert_eq!(cycles, 2);
+            assert_eq!(cpu.p.z, false);
+            assert_eq!(cpu.p.n, false);
+        } else {
+            panic!("Wrong instruction, got {:?}", instr);
+        }
+    }
+
+    #[test]
+    fn ldy_zp_test() {
+        let (mut cpu, mut mem) = generate_cpu_and_mem();
+        mem.write(0x0040, 0x44);  // M[0x0040] <- 0x44
+        mem.write(0, 0xA4);
+        mem.write(1, 0x40);
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        if let Instruction::LDY(mode, _, time) = instr {
+            let cycles = instruction_func::ldy(&mut cpu, &mem, mode, *time);
+            assert_eq!(cpu.y, 0x44);
+            assert_eq!(cycles, 3);
+            assert_eq!(cpu.p.z, false);
+            assert_eq!(cpu.p.n, false);
+        } else {
+            panic!("Wrong instruction, got {:?}", instr);
+        }
+    }
+
+    #[test]
+    fn ldy_zpx_test() {
+        let (mut cpu, mut mem) = generate_cpu_and_mem();
+        mem.write(0x0040, 0x44);  // M[0x0040] <- 0x44
+        mem.write(0, 0xB4);
+        mem.write(1, 0x3F);
+        cpu.x = 1;
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        if let Instruction::LDY(mode, _, time) = instr {
+            let cycles = instruction_func::ldy(&mut cpu, &mem, mode, *time);
+            assert_eq!(cpu.y, 0x44);
+            assert_eq!(cycles, 4);
+            assert_eq!(cpu.p.z, false);
+            assert_eq!(cpu.p.n, false);
+        } else {
+            panic!("Wrong instruction, got {:?}", instr);
+        }
+    }
+
+    #[test]
+    fn ldy_abs_test() {
+        let (mut cpu, mut mem) = generate_cpu_and_mem();
+        mem.write(0x0140, 0x44);
+        mem.write(0, 0xAC);
+        mem.write(1, 0x40);
+        mem.write(2, 0x01);
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        if let Instruction::LDY(mode, _, time) = instr {
+            let cycles = instruction_func::ldy(&mut cpu, &mem, mode, *time);
+            assert_eq!(cpu.y, 0x44);
+            assert_eq!(cycles, 4);
+            assert_eq!(cpu.p.z, false);
+            assert_eq!(cpu.p.n, false);
+        } else {
+            panic!("Wrong instruction, got {:?}", instr);
+        }
+    }
+
+    #[test]
+    fn ldy_absx_test_same_page() {
+        let (mut cpu, mut mem) = generate_cpu_and_mem();
+        mem.write(0x0140, 0x44);
+        mem.write(0, 0xBC);
+        mem.write(1, 0x3F);
+        mem.write(2, 0x01);
+        cpu.x = 0x01;
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        if let Instruction::LDY(mode, _, time) = instr {
+            let cycles = instruction_func::ldy(&mut cpu, &mem, mode, *time);
+            assert_eq!(cpu.y, 0x44);
+            assert_eq!(cycles, 4);
+            assert_eq!(cpu.p.z, false);
+            assert_eq!(cpu.p.n, false);
+        } else {
+            panic!("Wrong instruction, got {:?}", instr);
+        }
+    }
+
+    #[test]
+    fn ldy_absx_test_diff_page() {
+        let (mut cpu, mut mem) = generate_cpu_and_mem();
+        mem.write(0x0140, 0x44);
+        mem.write(0, 0xBC);
+        mem.write(1, 0xC1);
+        mem.write(2, 0x00);
+        cpu.x = 0x7F;
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        if let Instruction::LDY(mode, _, time) = instr {
+            let cycles = instruction_func::ldy(&mut cpu, &mem, mode, *time);
+            assert_eq!(cpu.y, 0x44);
+            assert_eq!(cycles, 5);
+            assert_eq!(cpu.p.z, false);
+            assert_eq!(cpu.p.n, false);
+        } else {
+            panic!("Wrong instruction, got {:?}", instr);
+        }
+    }
+
+    #[test]
+    fn lda_imm_test() {
         let (mut cpu, mut mem) = generate_cpu_and_mem();
         mem.write(0, 0xA9);
         mem.write(1, 0x44);
-        let instr = INSTRUCTION_TABLE.get(&0xA9).unwrap();
-        if let Instruction::LDA(mode, len, time) = instr {
-            cpu.read_byte_and_increment(memory); 
-            let cycles = instruction_func::lda(&mut cpu, &mem, mode, *len, *time);
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        if let Instruction::LDA(mode, _, time) = instr {
+            let cycles = instruction_func::lda(&mut cpu, &mem, mode, *time);
             assert_eq!(cpu.a, 0x44);
-	    assert_eq!(cycles, 2);
+            assert_eq!(cycles, 2);
+            assert_eq!(cpu.p.z, false);
+            assert_eq!(cpu.p.n, false);
+        } else {
+            panic!("Wrong instruction, got {:?}", instr);
+        }
+    }
+
+    #[test]
+    fn lda_zp_test() {
+        let (mut cpu, mut mem) = generate_cpu_and_mem();
+        mem.write(0x0040, 0x44);  // M[0x0040] <- 0x44
+        mem.write(0, 0xA5); // LDA $40
+        mem.write(1, 0x40);
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        if let Instruction::LDA(mode, _, time) = instr {
+            let cycles = instruction_func::lda(&mut cpu, &mem, mode, *time);
+            assert_eq!(cpu.a, 0x44);
+            assert_eq!(cycles, 3);
+            assert_eq!(cpu.p.z, false);
+            assert_eq!(cpu.p.n, false);
+        } else {
+            panic!("Wrong instruction, got {:?}", instr);
+        }
+    }
+
+    #[test]
+    fn lda_zpx_test() {
+        let (mut cpu, mut mem) = generate_cpu_and_mem();
+        mem.write(0x0040, 0x44);  // M[0x0040] <- 0x44
+        mem.write(0, 0xB5);
+        mem.write(1, 0x3F);
+        cpu.x = 1;
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        if let Instruction::LDA(mode, _, time) = instr {
+            let cycles = instruction_func::lda(&mut cpu, &mem, mode, *time);
+            assert_eq!(cpu.a, 0x44);
+            assert_eq!(cycles, 4);
+            assert_eq!(cpu.p.z, false);
+            assert_eq!(cpu.p.n, false);
+        } else {
+            panic!("Wrong instruction, got {:?}", instr);
+        }
+    }
+
+    #[test]
+    fn lda_abs_test() {
+        let (mut cpu, mut mem) = generate_cpu_and_mem();
+        mem.write(0x0140, 0x44);
+        mem.write(0, 0xAD);
+        mem.write(1, 0x40);
+        mem.write(2, 0x01);
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        if let Instruction::LDA(mode, _, time) = instr {
+            let cycles = instruction_func::lda(&mut cpu, &mem, mode, *time);
+            assert_eq!(cpu.a, 0x44);
+            assert_eq!(cycles, 4);
+            assert_eq!(cpu.p.z, false);
+            assert_eq!(cpu.p.n, false);
+        } else {
+            panic!("Wrong instruction, got {:?}", instr);
+        }
+    }
+
+    #[test]
+    fn lda_absx_test_same_page() {
+        let (mut cpu, mut mem) = generate_cpu_and_mem();
+        mem.write(0x0140, 0x44);
+        mem.write(0, 0xBD);
+        mem.write(1, 0x3F);
+        mem.write(2, 0x01);
+        cpu.x = 0x01;
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        if let Instruction::LDA(mode, _, time) = instr {
+            let cycles = instruction_func::lda(&mut cpu, &mem, mode, *time);
+            assert_eq!(cpu.a, 0x44);
+            assert_eq!(cycles, 4);
+            assert_eq!(cpu.p.z, false);
+            assert_eq!(cpu.p.n, false);
+        } else {
+            panic!("Wrong instruction, got {:?}", instr);
+        }
+    }
+
+    #[test]
+    fn lda_absx_test_diff_page() {
+        let (mut cpu, mut mem) = generate_cpu_and_mem();
+        mem.write(0x0140, 0x44);
+        mem.write(0, 0xBD);
+        mem.write(1, 0xC1);
+        mem.write(2, 0x00);
+        cpu.x = 0x7F;
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        if let Instruction::LDA(mode, _, time) = instr {
+            let cycles = instruction_func::lda(&mut cpu, &mem, mode, *time);
+            assert_eq!(cpu.a, 0x44);
+            assert_eq!(cycles, 5);
+            assert_eq!(cpu.p.z, false);
+            assert_eq!(cpu.p.n, false);
+        } else {
+            panic!("Wrong instruction, got {:?}", instr);
+        }
+    }
+
+    #[test]
+    fn lda_absy_test_same_page() {
+        let (mut cpu, mut mem) = generate_cpu_and_mem();
+        mem.write(0x0140, 0x44);
+        mem.write(0, 0xB9);
+        mem.write(1, 0x3F);
+        mem.write(2, 0x01);
+        cpu.y = 0x01;
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        if let Instruction::LDA(mode, _, time) = instr {
+            let cycles = instruction_func::lda(&mut cpu, &mem, mode, *time);
+            assert_eq!(cpu.a, 0x44);
+            assert_eq!(cycles, 4);
+            assert_eq!(cpu.p.z, false);
+            assert_eq!(cpu.p.n, false);
+        } else {
+            panic!("Wrong instruction, got {:?}", instr);
+        }
+    }
+
+    #[test]
+    fn lda_absy_test_diff_page() {
+        let (mut cpu, mut mem) = generate_cpu_and_mem();
+        mem.write(0x0140, 0x44);
+        mem.write(0, 0xB9);
+        mem.write(1, 0xC1);
+        mem.write(2, 0x00);
+        cpu.y = 0x7F;
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        if let Instruction::LDA(mode, _, time) = instr {
+            let cycles = instruction_func::lda(&mut cpu, &mem, mode, *time);
+            assert_eq!(cpu.a, 0x44);
+            assert_eq!(cycles, 5);
+            assert_eq!(cpu.p.z, false);
+            assert_eq!(cpu.p.n, false);
+        } else {
+            panic!("Wrong instruction, got {:?}", instr);
+        }
+    }
+
+    // TODO: index indirect and indirect index for LDA
+
+    #[test]
+    fn sta_zp_test() {
+        let (mut cpu, mut mem) = generate_cpu_and_mem();
+        mem.write(0, 0xA9); // LDA #$44
+        mem.write(1, 0x44);
+        mem.write(2, 0x85); // STA $40
+        mem.write(3, 0x40);
+        cpu.instruction_cycle(&mut mem).unwrap(); // execte the LDA instruction
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        if let Instruction::STA(mode, _, time) = instr {
+            let cycles = instruction_func::sta(&mut cpu, &mut mem, mode, *time);
+            assert_eq!(cpu.a, 0x44);
+            assert_eq!(mem.read(0x0040), 0x44);
+            assert_eq!(cycles, 3);
             assert_eq!(cpu.p.z, false);
             assert_eq!(cpu.p.n, false);
         }
