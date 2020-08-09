@@ -498,6 +498,34 @@ pub mod instruction_func {
         let cycles = time + extra_cycles;
         cycles
     }
+
+    pub fn stx(cpu: &mut CPU, memory: &mut Memory, mode: &AddressingMode, time: usize) -> usize {
+	
+        let (operand, extra_cycles) = match *mode {
+            AddressingMode::ZeroPage | AddressingMode::ZeroPageY | AddressingMode::Absolute =>
+                get_operand_using_addr_mode(mode, cpu, memory),
+            _ => panic!("Unsupported addressing mode {:?} for STA", *mode)
+        };
+
+        memory.write(operand, cpu.x);
+
+        let cycles = time + extra_cycles;
+        cycles
+    }
+
+    pub fn sty(cpu: &mut CPU, memory: &mut Memory, mode: &AddressingMode, time: usize) -> usize {
+	
+        let (operand, extra_cycles) = match *mode {
+            AddressingMode::ZeroPage | AddressingMode::ZeroPageX | AddressingMode::Absolute =>
+                get_operand_using_addr_mode(mode, cpu, memory),
+            _ => panic!("Unsupported addressing mode {:?} for STA", *mode)
+        };
+
+        memory.write(operand, cpu.y);
+
+        let cycles = time + extra_cycles;
+        cycles
+    }
 }
 
 #[cfg(test)]
@@ -506,6 +534,126 @@ mod tests {
 
     fn generate_cpu_and_mem() -> (CPU, Memory) {
         (CPU::new(), Memory::new())
+    }
+
+    #[test]
+    fn adc_imm_test_no_carry_no_overflow() {
+        let (mut cpu, mut mem) = generate_cpu_and_mem();
+        mem.write(0, 0x69);
+        mem.write(1, 0x20);
+	cpu.a = 0x24;
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        if let Instruction::ADC(mode, time) = instr {
+            let cycles = instruction_func::adc(&mut cpu, &mem, mode, *time);
+            assert_eq!(cpu.a, 0x44);
+            assert_eq!(cycles, 2);
+            assert_eq!(cpu.p.z, false);
+            assert_eq!(cpu.p.n, false);
+	    assert_eq!(cpu.p.c, false);
+	    assert_eq!(cpu.p.v, false);
+        } else {
+            panic!("Wrong instruction, got {:?}", instr);
+        }
+    }
+
+    #[test]
+    fn adc_imm_test_zero() {
+        let (mut cpu, mut mem) = generate_cpu_and_mem();
+        mem.write(0, 0x69);
+        mem.write(1, 0xFF);
+	cpu.a = 0x01;
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        if let Instruction::ADC(mode, time) = instr {
+            let cycles = instruction_func::adc(&mut cpu, &mem, mode, *time);
+            assert_eq!(cpu.a, 0x00);
+            assert_eq!(cycles, 2);
+            assert_eq!(cpu.p.z, true);
+            assert_eq!(cpu.p.n, false);
+	    assert_eq!(cpu.p.c, true);
+	    assert_eq!(cpu.p.v, false);
+        } else {
+            panic!("Wrong instruction, got {:?}", instr);
+        }
+    }
+
+    #[test]
+    fn adc_imm_test_neg() {
+        let (mut cpu, mut mem) = generate_cpu_and_mem();
+        mem.write(0, 0x69);
+        mem.write(1, 0x01);
+	cpu.a = 0xFE;
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        if let Instruction::ADC(mode, time) = instr {
+            let cycles = instruction_func::adc(&mut cpu, &mem, mode, *time); // will do 1 + -2
+            assert_eq!(cpu.a, 0xFF);
+            assert_eq!(cycles, 2);
+            assert_eq!(cpu.p.z, false);
+            assert_eq!(cpu.p.n, true);
+	    assert_eq!(cpu.p.c, false);
+	    assert_eq!(cpu.p.v, false);
+        } else {
+            panic!("Wrong instruction, got {:?}", instr);
+        }
+    }
+
+    #[test]
+    fn adc_imm_test_no_carry_overflow() {
+        let (mut cpu, mut mem) = generate_cpu_and_mem();
+        mem.write(0, 0x69);
+        mem.write(1, 0x50);
+	cpu.a = 0x50;
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        if let Instruction::ADC(mode, time) = instr {
+            let cycles = instruction_func::adc(&mut cpu, &mem, mode, *time);
+            assert_eq!(cpu.a, 0xA0);
+            assert_eq!(cycles, 2);
+            assert_eq!(cpu.p.z, false);
+            assert_eq!(cpu.p.n, true);
+	    assert_eq!(cpu.p.c, false);
+	    assert_eq!(cpu.p.v, true);
+        } else {
+            panic!("Wrong instruction, got {:?}", instr);
+        }
+    }
+
+    #[test]
+    fn adc_imm_test_carry_no_overflow() {
+        let (mut cpu, mut mem) = generate_cpu_and_mem();
+        mem.write(0, 0x69);
+        mem.write(1, 0x50);
+	cpu.a = 0xD0;
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        if let Instruction::ADC(mode, time) = instr {
+            let cycles = instruction_func::adc(&mut cpu, &mem, mode, *time);
+            assert_eq!(cpu.a, 0x20);
+            assert_eq!(cycles, 2);
+            assert_eq!(cpu.p.z, false);
+            assert_eq!(cpu.p.n, false);
+	    assert_eq!(cpu.p.c, true);
+	    assert_eq!(cpu.p.v, false);
+        } else {
+            panic!("Wrong instruction, got {:?}", instr);
+        }
+    }
+
+    #[test]
+    fn adc_imm_test_carry_overflow() {
+        let (mut cpu, mut mem) = generate_cpu_and_mem();
+        mem.write(0, 0x69);
+        mem.write(1, 0xD0);
+	cpu.a = 0x90;
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        if let Instruction::ADC(mode, time) = instr {
+            let cycles = instruction_func::adc(&mut cpu, &mem, mode, *time);
+            assert_eq!(cpu.a, 0x60);
+            assert_eq!(cycles, 2);
+            assert_eq!(cpu.p.z, false);
+            assert_eq!(cpu.p.n, false);
+	    assert_eq!(cpu.p.c, true);
+	    assert_eq!(cpu.p.v, true);
+        } else {
+            panic!("Wrong instruction, got {:?}", instr);
+        }
     }
 
     #[test]
@@ -952,6 +1100,40 @@ mod tests {
     }
 
     #[test]
+    fn lda_imm_zero_test() {
+        let (mut cpu, mut mem) = generate_cpu_and_mem();
+        mem.write(0, 0xA9);
+        mem.write(1, 0x00);
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        if let Instruction::LDA(mode, time) = instr {
+            let cycles = instruction_func::lda(&mut cpu, &mem, mode, *time);
+            assert_eq!(cpu.a, 0x00);
+            assert_eq!(cycles, 2);
+            assert_eq!(cpu.p.z, true);
+            assert_eq!(cpu.p.n, false);
+        } else {
+            panic!("Wrong instruction, got {:?}", instr);
+        }
+    }
+
+    #[test]
+    fn lda_imm_neg_test() {
+        let (mut cpu, mut mem) = generate_cpu_and_mem();
+        mem.write(0, 0xA9);
+        mem.write(1, 0x80);
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        if let Instruction::LDA(mode, time) = instr {
+            let cycles = instruction_func::lda(&mut cpu, &mem, mode, *time);
+            assert_eq!(cpu.a, 0x80);
+            assert_eq!(cycles, 2);
+            assert_eq!(cpu.p.z, false);
+            assert_eq!(cpu.p.n, true);
+        } else {
+            panic!("Wrong instruction, got {:?}", instr);
+        }
+    }
+
+    #[test]
     fn sta_zp_test() {
         let (mut cpu, mut mem) = generate_cpu_and_mem();
         mem.write(0, 0xA9); // LDA #$44
@@ -970,4 +1152,31 @@ mod tests {
         }
     }
 
+    #[test]
+    fn stx_zp_test() {
+        let (mut cpu, mut mem) = generate_cpu_and_mem();
+        mem.write(0, 0x86); // STX $40
+        mem.write(1, 0x40);
+	cpu.x = 0x44;
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        if let Instruction::STX(mode, time) = instr {
+            let cycles = instruction_func::stx(&mut cpu, &mut mem, mode, *time);
+            assert_eq!(mem.read(0x0040), 0x44);
+            assert_eq!(cycles, 3);
+        }
+    }
+
+    #[test]
+    fn sty_zp_test() {
+        let (mut cpu, mut mem) = generate_cpu_and_mem();
+        mem.write(0, 0x84); // STY $40
+        mem.write(1, 0x40);
+	cpu.y = 0x44;
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        if let Instruction::STY(mode, time) = instr {
+            let cycles = instruction_func::sty(&mut cpu, &mut mem, mode, *time);
+            assert_eq!(mem.read(0x0040), 0x44);
+            assert_eq!(cycles, 3);
+        }
+    }
 }

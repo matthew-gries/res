@@ -91,8 +91,10 @@ impl CPU {
 
         let mut cycles = match instr {
             Instruction::ADC(mode, time) => instruction_func::adc(self, memory, mode, *time),
-            Instruction::LDA(mode, time) => instruction_func::lda(self, memory, mode, *time),
             Instruction::STA(mode, time) => instruction_func::sta(self, memory, mode, *time),
+            Instruction::STX(mode, time) => instruction_func::stx(self, memory, mode, *time),
+            Instruction::STY(mode, time) => instruction_func::sty(self, memory, mode, *time),
+            Instruction::LDA(mode, time) => instruction_func::lda(self, memory, mode, *time),
             Instruction::LDX(mode, time) => instruction_func::ldx(self, memory, mode, *time),
             Instruction::LDY(mode, time) => instruction_func::ldy(self, memory, mode, *time),
             _ => panic!("{:?} has not been implemented!")
