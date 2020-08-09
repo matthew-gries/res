@@ -483,6 +483,75 @@ pub mod instruction_func {
         time
     }
 
+    pub fn cmp(cpu: &mut CPU, memory: &Memory, mode: &AddressingMode, time: usize) -> usize {
+        let (operand, extra_cycles) = match *mode {
+            AddressingMode::Immediate | AddressingMode::ZeroPage | AddressingMode::ZeroPageX
+            | AddressingMode::Absolute | AddressingMode::AbsoluteX | AddressingMode::AbsoluteY
+            | AddressingMode::IndexedIndirect | AddressingMode::IndirectIndexed =>
+                get_operand_using_addr_mode(mode, cpu, memory),
+            _ => panic!("Unsupported addressing mode {:?} for CMP", *mode),
+        };
+
+        let op = {
+            if let AddressingMode::Immediate = *mode {
+                operand as u8
+            } else {
+                memory.read(operand)
+            }
+        };
+
+        cpu.p.c = cpu.a >= op;
+        cpu.p.z = cpu.a == op;
+        cpu.p.n = CPU::check_if_neg(cpu.a.overflowing_sub(op).0);
+        
+        let cycles = time + extra_cycles;
+        cycles
+    }
+
+    pub fn cpx(cpu: &mut CPU, memory: &Memory, mode: &AddressingMode, time: usize) -> usize {
+        let (operand, _) = match *mode {
+            AddressingMode::Immediate | AddressingMode::ZeroPage | AddressingMode::Absolute =>
+                get_operand_using_addr_mode(mode, cpu, memory),
+            _ => panic!("Unsupported addressing mode {:?} for CMP", *mode),
+        };
+
+        let op = {
+            if let AddressingMode::Immediate = *mode {
+                operand as u8
+            } else {
+                memory.read(operand)
+            }
+        };
+
+        cpu.p.c = cpu.x >= op;
+        cpu.p.z = cpu.x == op;
+        cpu.p.n = CPU::check_if_neg(cpu.x.overflowing_sub(op).0);
+        
+        time
+    }
+
+    pub fn cpy(cpu: &mut CPU, memory: &Memory, mode: &AddressingMode, time: usize) -> usize {
+        let (operand, _) = match *mode {
+            AddressingMode::Immediate | AddressingMode::ZeroPage | AddressingMode::Absolute =>
+                get_operand_using_addr_mode(mode, cpu, memory),
+            _ => panic!("Unsupported addressing mode {:?} for CMP", *mode),
+        };
+
+        let op = {
+            if let AddressingMode::Immediate = *mode {
+                operand as u8
+            } else {
+                memory.read(operand)
+            }
+        };
+
+        cpu.p.c = cpu.y >= op;
+        cpu.p.z = cpu.y == op;
+        cpu.p.n = CPU::check_if_neg(cpu.y.overflowing_sub(op).0);
+        
+        time
+    }
+
     pub fn eor(cpu: &mut CPU, memory: &Memory, mode: &AddressingMode, time: usize) -> usize {
         
         let (operand, extra_cycles) = match *mode {
@@ -972,6 +1041,222 @@ mod tests {
             assert_eq!(cycles, 2);
             assert_eq!(cpu.p.z, false);
             assert_eq!(cpu.p.n, true);
+        } else {
+            panic!("Wrong instruction, got {:?}", instr);
+        }
+    }
+
+    #[test]
+    fn cmp_imm_test() {
+        let (mut cpu, mut mem) = generate_cpu_and_mem();
+        mem.write(0, 0xC9);
+        mem.write(1, 0x02);
+        cpu.a = 0x03;
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        if let Instruction::CMP(mode, time) = instr {
+            let cycles = instruction_func::cmp(&mut cpu, &mem, mode, *time);
+            assert_eq!(cycles, 2);
+            assert_eq!(cpu.p.z, false);
+            assert_eq!(cpu.p.n, false);
+            assert_eq!(cpu.p.c, true);
+        } else {
+            panic!("Wrong instruction, got {:?}", instr);
+        }
+    }
+
+    #[test]
+    fn cmp_imm_carry_test() {
+        let (mut cpu, mut mem) = generate_cpu_and_mem();
+        mem.write(0, 0xC9);
+        mem.write(1, 0x03);
+        cpu.a = 0x04;
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        if let Instruction::CMP(mode, time) = instr {
+            let cycles = instruction_func::cmp(&mut cpu, &mem, mode, *time);
+            assert_eq!(cycles, 2);
+            assert_eq!(cpu.p.z, false);
+            assert_eq!(cpu.p.n, false);
+            assert_eq!(cpu.p.c, true);
+        } else {
+            panic!("Wrong instruction, got {:?}", instr);
+        }
+    }
+
+    #[test]
+    fn cmp_imm_zero_test() {
+        let (mut cpu, mut mem) = generate_cpu_and_mem();
+        mem.write(0, 0xC9);
+        mem.write(1, 0x03);
+        cpu.a = 0x03;
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        if let Instruction::CMP(mode, time) = instr {
+            let cycles = instruction_func::cmp(&mut cpu, &mem, mode, *time);
+            assert_eq!(cycles, 2);
+            assert_eq!(cpu.p.z, true);
+            assert_eq!(cpu.p.n, false);
+            assert_eq!(cpu.p.c, true);
+        } else {
+            panic!("Wrong instruction, got {:?}", instr);
+        }
+    }
+
+    #[test]
+    fn cmp_imm_neg_test() {
+        let (mut cpu, mut mem) = generate_cpu_and_mem();
+        mem.write(0, 0xC9);
+        mem.write(1, 0x03);
+        cpu.a = 0x02;
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        if let Instruction::CMP(mode, time) = instr {
+            let cycles = instruction_func::cmp(&mut cpu, &mem, mode, *time);
+            assert_eq!(cycles, 2);
+            assert_eq!(cpu.p.z, false);
+            assert_eq!(cpu.p.n, true);
+            assert_eq!(cpu.p.c, false);
+        } else {
+            panic!("Wrong instruction, got {:?}", instr);
+        }
+    }
+
+    #[test]
+    fn cpx_imm_test() {
+        let (mut cpu, mut mem) = generate_cpu_and_mem();
+        mem.write(0, 0xE0);
+        mem.write(1, 0x02);
+        cpu.x = 0x03;
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        if let Instruction::CPX(mode, time) = instr {
+            let cycles = instruction_func::cpx(&mut cpu, &mem, mode, *time);
+            assert_eq!(cycles, 2);
+            assert_eq!(cpu.p.z, false);
+            assert_eq!(cpu.p.n, false);
+            assert_eq!(cpu.p.c, true);
+        } else {
+            panic!("Wrong instruction, got {:?}", instr);
+        }
+    }
+
+    #[test]
+    fn cpx_imm_carry_test() {
+        let (mut cpu, mut mem) = generate_cpu_and_mem();
+        mem.write(0, 0xE0);
+        mem.write(1, 0x03);
+        cpu.x = 0x04;
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        if let Instruction::CPX(mode, time) = instr {
+            let cycles = instruction_func::cpx(&mut cpu, &mem, mode, *time);
+            assert_eq!(cycles, 2);
+            assert_eq!(cpu.p.z, false);
+            assert_eq!(cpu.p.n, false);
+            assert_eq!(cpu.p.c, true);
+        } else {
+            panic!("Wrong instruction, got {:?}", instr);
+        }
+    }
+
+    #[test]
+    fn cpx_imm_zero_test() {
+        let (mut cpu, mut mem) = generate_cpu_and_mem();
+        mem.write(0, 0xE0);
+        mem.write(1, 0x03);
+        cpu.x = 0x03;
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        if let Instruction::CPX(mode, time) = instr {
+            let cycles = instruction_func::cpx(&mut cpu, &mem, mode, *time);
+            assert_eq!(cycles, 2);
+            assert_eq!(cpu.p.z, true);
+            assert_eq!(cpu.p.n, false);
+            assert_eq!(cpu.p.c, true);
+        } else {
+            panic!("Wrong instruction, got {:?}", instr);
+        }
+    }
+
+    #[test]
+    fn cpx_imm_neg_test() {
+        let (mut cpu, mut mem) = generate_cpu_and_mem();
+        mem.write(0, 0xE0);
+        mem.write(1, 0x03);
+        cpu.x = 0x02;
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        if let Instruction::CPX(mode, time) = instr {
+            let cycles = instruction_func::cpx(&mut cpu, &mem, mode, *time);
+            assert_eq!(cycles, 2);
+            assert_eq!(cpu.p.z, false);
+            assert_eq!(cpu.p.n, true);
+            assert_eq!(cpu.p.c, false);
+        } else {
+            panic!("Wrong instruction, got {:?}", instr);
+        }
+    }
+
+    #[test]
+    fn cpy_imm_test() {
+        let (mut cpu, mut mem) = generate_cpu_and_mem();
+        mem.write(0, 0xC0);
+        mem.write(1, 0x02);
+        cpu.y = 0x03;
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        if let Instruction::CPY(mode, time) = instr {
+            let cycles = instruction_func::cpy(&mut cpu, &mem, mode, *time);
+            assert_eq!(cycles, 2);
+            assert_eq!(cpu.p.z, false);
+            assert_eq!(cpu.p.n, false);
+            assert_eq!(cpu.p.c, true);
+        } else {
+            panic!("Wrong instruction, got {:?}", instr);
+        }
+    }
+
+    #[test]
+    fn cpy_imm_carry_test() {
+        let (mut cpu, mut mem) = generate_cpu_and_mem();
+        mem.write(0, 0xC0);
+        mem.write(1, 0x03);
+        cpu.y = 0x04;
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        if let Instruction::CPY(mode, time) = instr {
+            let cycles = instruction_func::cpy(&mut cpu, &mem, mode, *time);
+            assert_eq!(cycles, 2);
+            assert_eq!(cpu.p.z, false);
+            assert_eq!(cpu.p.n, false);
+            assert_eq!(cpu.p.c, true);
+        } else {
+            panic!("Wrong instruction, got {:?}", instr);
+        }
+    }
+
+    #[test]
+    fn cpy_imm_zero_test() {
+        let (mut cpu, mut mem) = generate_cpu_and_mem();
+        mem.write(0, 0xC0);
+        mem.write(1, 0x03);
+        cpu.y = 0x03;
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        if let Instruction::CPY(mode, time) = instr {
+            let cycles = instruction_func::cpy(&mut cpu, &mem, mode, *time);
+            assert_eq!(cycles, 2);
+            assert_eq!(cpu.p.z, true);
+            assert_eq!(cpu.p.n, false);
+            assert_eq!(cpu.p.c, true);
+        } else {
+            panic!("Wrong instruction, got {:?}", instr);
+        }
+    }
+
+    #[test]
+    fn cpy_imm_neg_test() {
+        let (mut cpu, mut mem) = generate_cpu_and_mem();
+        mem.write(0, 0xC0);
+        mem.write(1, 0x03);
+        cpu.y = 0x02;
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        if let Instruction::CPY(mode, time) = instr {
+            let cycles = instruction_func::cpy(&mut cpu, &mem, mode, *time);
+            assert_eq!(cycles, 2);
+            assert_eq!(cpu.p.z, false);
+            assert_eq!(cpu.p.n, true);
+            assert_eq!(cpu.p.c, false);
         } else {
             panic!("Wrong instruction, got {:?}", instr);
         }
