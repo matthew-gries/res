@@ -28,7 +28,7 @@ pub fn get_operand_using_addr_mode(mode: &AddressingMode, cpu: &mut CPU, memory:
             (cpu.read_byte_and_increment(memory), 0)
         },
         AddressingMode::ZeroPage => {
-            let addr = cpu.read_byte_and_increment(memory); 
+            let addr = cpu.read_byte_and_increment(memory);
             (memory.read(addr as u16), 0)
         },
         AddressingMode::ZeroPageX => {
@@ -394,4 +394,49 @@ pub mod instruction_func {
         let cycles = time + extra_cycles;
         cycles
     }
+
+    pub fn lda(cpu: &mut CPU, memory: &Memory, mode: &AddressingMode, len: usize, time: usize) -> usize {
+
+        let (operand, extra_cycles) = match *mode {
+            AddressingMode::Immediate | AddressingMode::ZeroPage | AddressingMode::ZeroPageX
+            | AddressingMode::Absolute | AddressingMode::AbsoluteX | AddressingMode::AbsoluteY
+            | AddressingMode::IndexedIndirect | AddressingMode::IndirectIndexed =>
+                get_operand_using_addr_mode(mode, cpu, memory),
+            _ => panic!("Unsupported addressing mode {:?} for LDA", *mode),
+        };
+
+        cpu.a = operand;
+
+        cpu.p.n =  CPU::check_if_neg(operand);
+        cpu.p.z = operand == 0;
+
+        let cycles = time + extra_cycles;
+        cycles
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn generate_cpu_and_mem() -> (CPU, Memory) {
+        (CPU::new(), Memory::new())
+    }
+
+    #[test]
+    fn lda_test() {
+        let (mut cpu, mut mem) = generate_cpu_and_mem();
+        mem.write(0, 0xA9);
+        mem.write(1, 0x44);
+        let instr = INSTRUCTION_TABLE.get(&0xA9).unwrap();
+        if let Instruction::LDA(mode, len, time) = instr {
+            cpu.read_byte_and_increment(memory); 
+            let cycles = instruction_func::lda(&mut cpu, &mem, mode, *len, *time);
+            assert_eq!(cpu.a, 0x44);
+	    assert_eq!(cycles, 2);
+            assert_eq!(cpu.p.z, false);
+            assert_eq!(cpu.p.n, false);
+        }
+    }
+
 }
