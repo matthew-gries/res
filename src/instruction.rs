@@ -404,6 +404,60 @@ pub mod instruction_func {
         cycles
     }
 
+    pub fn and(cpu: &mut CPU, memory: &Memory, mode: &AddressingMode, time: usize) -> usize {
+	
+        let (operand, extra_cycles) = match *mode {
+            AddressingMode::Immediate | AddressingMode::ZeroPage | AddressingMode::ZeroPageX
+            | AddressingMode::Absolute | AddressingMode::AbsoluteX | AddressingMode::AbsoluteY
+            | AddressingMode::IndexedIndirect | AddressingMode::IndirectIndexed =>
+                get_operand_using_addr_mode(mode, cpu, memory),
+            _ => panic!("Unsupported addressing mode {:?} for AND", *mode),
+        };
+
+        let result = {
+            if let AddressingMode::Immediate = *mode {
+                operand as u8
+            } else {
+                memory.read(operand)
+            }
+        };
+
+	cpu.a = cpu.a & result;
+
+	cpu.p.z = cpu.a == 0;
+	cpu.p.n = CPU::check_if_neg(cpu.a);
+
+	let cycles = time + extra_cycles;
+	cycles
+    }
+
+    pub fn eor(cpu: &mut CPU, memory: &Memory, mode: &AddressingMode, time: usize) -> usize {
+	
+        let (operand, extra_cycles) = match *mode {
+            AddressingMode::Immediate | AddressingMode::ZeroPage | AddressingMode::ZeroPageX
+            | AddressingMode::Absolute | AddressingMode::AbsoluteX | AddressingMode::AbsoluteY
+            | AddressingMode::IndexedIndirect | AddressingMode::IndirectIndexed =>
+                get_operand_using_addr_mode(mode, cpu, memory),
+            _ => panic!("Unsupported addressing mode {:?} for EOR", *mode),
+        };
+
+        let result = {
+            if let AddressingMode::Immediate = *mode {
+                operand as u8
+            } else {
+                memory.read(operand)
+            }
+        };
+
+	cpu.a = cpu.a ^ result;
+
+	cpu.p.z = cpu.a == 0;
+	cpu.p.n = CPU::check_if_neg(cpu.a);
+
+	let cycles = time + extra_cycles;
+	cycles
+    }
+
     pub fn lda(cpu: &mut CPU, memory: &Memory, mode: &AddressingMode, time: usize) -> usize {
 
         let (operand, extra_cycles) = match *mode {
@@ -483,6 +537,33 @@ pub mod instruction_func {
         cycles
     }
 
+    pub fn ora(cpu: &mut CPU, memory: &Memory, mode: &AddressingMode, time: usize) -> usize {
+	
+        let (operand, extra_cycles) = match *mode {
+            AddressingMode::Immediate | AddressingMode::ZeroPage | AddressingMode::ZeroPageX
+            | AddressingMode::Absolute | AddressingMode::AbsoluteX | AddressingMode::AbsoluteY
+            | AddressingMode::IndexedIndirect | AddressingMode::IndirectIndexed =>
+                get_operand_using_addr_mode(mode, cpu, memory),
+            _ => panic!("Unsupported addressing mode {:?} for ORA", *mode),
+        };
+
+        let result = {
+            if let AddressingMode::Immediate = *mode {
+                operand as u8
+            } else {
+                memory.read(operand)
+            }
+        };
+
+	cpu.a = cpu.a | result;
+
+	cpu.p.z = cpu.a == 0;
+	cpu.p.n = CPU::check_if_neg(cpu.a);
+
+	let cycles = time + extra_cycles;
+	cycles
+    }
+
     pub fn sta(cpu: &mut CPU, memory: &mut Memory, mode: &AddressingMode, time: usize) -> usize {
         
         let (operand, extra_cycles) = match *mode {
@@ -504,7 +585,7 @@ pub mod instruction_func {
         let (operand, extra_cycles) = match *mode {
             AddressingMode::ZeroPage | AddressingMode::ZeroPageY | AddressingMode::Absolute =>
                 get_operand_using_addr_mode(mode, cpu, memory),
-            _ => panic!("Unsupported addressing mode {:?} for STA", *mode)
+            _ => panic!("Unsupported addressing mode {:?} for STX", *mode)
         };
 
         memory.write(operand, cpu.x);
@@ -518,7 +599,7 @@ pub mod instruction_func {
         let (operand, extra_cycles) = match *mode {
             AddressingMode::ZeroPage | AddressingMode::ZeroPageX | AddressingMode::Absolute =>
                 get_operand_using_addr_mode(mode, cpu, memory),
-            _ => panic!("Unsupported addressing mode {:?} for STA", *mode)
+            _ => panic!("Unsupported addressing mode {:?} for STY", *mode)
         };
 
         memory.write(operand, cpu.y);
@@ -651,6 +732,114 @@ mod tests {
             assert_eq!(cpu.p.n, false);
 	    assert_eq!(cpu.p.c, true);
 	    assert_eq!(cpu.p.v, true);
+        } else {
+            panic!("Wrong instruction, got {:?}", instr);
+        }
+    }
+
+    #[test]
+    fn and_imm_test() {
+        let (mut cpu, mut mem) = generate_cpu_and_mem();
+        mem.write(0, 0x29);
+        mem.write(1, 0xF0);
+	cpu.a = 0x1F;
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        if let Instruction::AND(mode, time) = instr {
+            let cycles = instruction_func::and(&mut cpu, &mem, mode, *time);
+            assert_eq!(cpu.a, 0x10);
+            assert_eq!(cycles, 2);
+            assert_eq!(cpu.p.z, false);
+            assert_eq!(cpu.p.n, false);
+        } else {
+            panic!("Wrong instruction, got {:?}", instr);
+        }
+    }
+
+    #[test]
+    fn and_imm_zero_test() {
+        let (mut cpu, mut mem) = generate_cpu_and_mem();
+        mem.write(0, 0x29);
+        mem.write(1, 0xF0);
+	cpu.a = 0x0F;
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        if let Instruction::AND(mode, time) = instr {
+            let cycles = instruction_func::and(&mut cpu, &mem, mode, *time);
+            assert_eq!(cpu.a, 0x00);
+            assert_eq!(cycles, 2);
+            assert_eq!(cpu.p.z, true);
+            assert_eq!(cpu.p.n, false);
+        } else {
+            panic!("Wrong instruction, got {:?}", instr);
+        }
+    }
+
+    #[test]
+    fn and_imm_neg_test() {
+        let (mut cpu, mut mem) = generate_cpu_and_mem();
+        mem.write(0, 0x29);
+        mem.write(1, 0xF0);
+	cpu.a = 0x8F;
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        if let Instruction::AND(mode, time) = instr {
+            let cycles = instruction_func::and(&mut cpu, &mem, mode, *time);
+            assert_eq!(cpu.a, 0x80);
+            assert_eq!(cycles, 2);
+            assert_eq!(cpu.p.z, false);
+            assert_eq!(cpu.p.n, true);
+        } else {
+            panic!("Wrong instruction, got {:?}", instr);
+        }
+    }
+
+    #[test]
+    fn eor_imm_test() {
+        let (mut cpu, mut mem) = generate_cpu_and_mem();
+        mem.write(0, 0x49);
+        mem.write(1, 0xF0);
+	cpu.a = 0x8F;
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        if let Instruction::EOR(mode, time) = instr {
+            let cycles = instruction_func::eor(&mut cpu, &mem, mode, *time);
+            assert_eq!(cpu.a, 0x7F);
+            assert_eq!(cycles, 2);
+            assert_eq!(cpu.p.z, false);
+            assert_eq!(cpu.p.n, false);
+        } else {
+            panic!("Wrong instruction, got {:?}", instr);
+        }
+    }
+
+    #[test]
+    fn eor_imm_zero_test() {
+        let (mut cpu, mut mem) = generate_cpu_and_mem();
+        mem.write(0, 0x49);
+        mem.write(1, 0xFF);
+	cpu.a = 0xFF;
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        if let Instruction::EOR(mode, time) = instr {
+            let cycles = instruction_func::eor(&mut cpu, &mem, mode, *time);
+            assert_eq!(cpu.a, 0x00);
+            assert_eq!(cycles, 2);
+            assert_eq!(cpu.p.z, true);
+            assert_eq!(cpu.p.n, false);
+        } else {
+            panic!("Wrong instruction, got {:?}", instr);
+        }
+    }
+
+    #[test]
+    fn eor_imm_neg_test() {
+        let (mut cpu, mut mem) = generate_cpu_and_mem();
+        mem.write(0, 0x49);
+        mem.write(1, 0xF0);
+	cpu.a = 0x0F;
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        if let Instruction::EOR(mode, time) = instr {
+            let cycles = instruction_func::eor(&mut cpu, &mem, mode, *time);
+            assert_eq!(cpu.a, 0xFF);
+            assert_eq!(cycles, 2);
+            assert_eq!(cpu.p.z, false);
+            assert_eq!(cpu.p.n, true);
         } else {
             panic!("Wrong instruction, got {:?}", instr);
         }
@@ -1132,6 +1321,61 @@ mod tests {
             panic!("Wrong instruction, got {:?}", instr);
         }
     }
+
+    #[test]
+    fn ora_imm_test() {
+        let (mut cpu, mut mem) = generate_cpu_and_mem();
+        mem.write(0, 0x09);
+        mem.write(1, 0x7F);
+	cpu.a = 0x00;
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        if let Instruction::ORA(mode, time) = instr {
+            let cycles = instruction_func::ora(&mut cpu, &mem, mode, *time);
+            assert_eq!(cpu.a, 0x7f);
+            assert_eq!(cycles, 2);
+            assert_eq!(cpu.p.z, false);
+            assert_eq!(cpu.p.n, false);
+        } else {
+            panic!("Wrong instruction, got {:?}", instr);
+        }
+    }
+
+    #[test]
+    fn ora_imm_zero_test() {
+        let (mut cpu, mut mem) = generate_cpu_and_mem();
+        mem.write(0, 0x09);
+        mem.write(1, 0x00);
+	cpu.a = 0x00;
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        if let Instruction::ORA(mode, time) = instr {
+            let cycles = instruction_func::ora(&mut cpu, &mem, mode, *time);
+            assert_eq!(cpu.a, 0x00);
+            assert_eq!(cycles, 2);
+            assert_eq!(cpu.p.z, true);
+            assert_eq!(cpu.p.n, false);
+        } else {
+            panic!("Wrong instruction, got {:?}", instr);
+        }
+    }
+
+    #[test]
+    fn ora_imm_neg_test() {
+        let (mut cpu, mut mem) = generate_cpu_and_mem();
+        mem.write(0, 0x09);
+        mem.write(1, 0x0F);
+	cpu.a = 0xF0;
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        if let Instruction::ORA(mode, time) = instr {
+            let cycles = instruction_func::ora(&mut cpu, &mem, mode, *time);
+            assert_eq!(cpu.a, 0xFF);
+            assert_eq!(cycles, 2);
+            assert_eq!(cpu.p.z, false);
+            assert_eq!(cpu.p.n, true);
+        } else {
+            panic!("Wrong instruction, got {:?}", instr);
+        }
+    }
+
 
     #[test]
     fn sta_zp_test() {
