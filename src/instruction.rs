@@ -640,6 +640,16 @@ pub mod instruction_func {
         cycles
     }
 
+    pub fn nop(cpu: &mut CPU, memory: &Memory, mode: &AddressingMode, time: usize) -> usize {
+        let (_, _) = match *mode {
+            AddressingMode::Implied =>
+                get_operand_using_addr_mode(mode, cpu, memory),
+            _ => panic!("Unsupported addressing mode {:?} for NOP", *mode),
+        };
+
+        time
+    }
+
     pub fn ora(cpu: &mut CPU, memory: &Memory, mode: &AddressingMode, time: usize) -> usize {
         
         let (operand, extra_cycles) = match *mode {
@@ -743,6 +753,43 @@ pub mod instruction_func {
 
         memory.write(operand, cpu.y);
 
+        let cycles = time + extra_cycles;
+        cycles
+    }
+
+    pub fn sbc(cpu: &mut CPU, memory: &Memory, mode: &AddressingMode, time: usize) -> usize {
+
+        let (operand, extra_cycles) = match *mode {
+            AddressingMode::Immediate | AddressingMode::ZeroPage | AddressingMode::ZeroPageX
+            | AddressingMode::Absolute | AddressingMode::AbsoluteX | AddressingMode::AbsoluteY
+            | AddressingMode::IndexedIndirect | AddressingMode::IndirectIndexed =>
+                get_operand_using_addr_mode(mode, cpu, memory),
+            _ => panic!("Unsupported addressing mode {:?} for SBC", *mode),
+        };
+
+        let op = {
+            if let AddressingMode::Immediate = *mode {
+                operand as u8
+            } else {
+                memory.read(operand)
+            }
+        };
+
+        let (result_temp, carry1) = cpu.a.overflowing_sub(op);
+
+        let (result, carry2) = result_temp.overflowing_sub(1 - cpu.p.c as u8);
+        let carry_bit = carry1 || carry2;
+
+        cpu.p.z = result == 0;
+        cpu.p.c = carry_bit;
+        cpu.p.n = CPU::check_if_neg(result);
+        // using overflowing_add on an unsigned 8-bit checks for overflow in bit 7, and as such works as the carry
+        // bit. We need to use the value of A and the operand and compare to the result to see if there is signed
+        // overflow (an invalid two's complement result)
+        let (_, signed_overflow) = (cpu.a as i8).overflowing_sub(op as i8); // TODO: is this the best way to do this?
+        cpu.p.v = signed_overflow;
+
+        cpu.a = result;
         let cycles = time + extra_cycles;
         cycles
     }
@@ -1716,6 +1763,126 @@ mod tests {
             let cycles = instruction_func::sty(&mut cpu, &mut mem, mode, *time);
             assert_eq!(mem.read(0x0040), 0x44);
             assert_eq!(cycles, 3);
+        }
+    }
+
+    #[test]
+    fn sbc_imm_test_no_carry_no_overflow() {
+        let (mut cpu, mut mem) = generate_cpu_and_mem();
+        mem.write(0, 0xE9);
+        mem.write(1, 0x30);
+        cpu.a = 0x50;
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        if let Instruction::SBC(mode, time) = instr {
+            let cycles = instruction_func::sbc(&mut cpu, &mem, mode, *time);
+            assert_eq!(cpu.a, 0x1F);
+            assert_eq!(cycles, 2);
+            assert_eq!(cpu.p.z, false);
+            assert_eq!(cpu.p.n, false);
+            assert_eq!(cpu.p.c, false);
+            assert_eq!(cpu.p.v, false);
+        } else {
+            panic!("Wrong instruction, got {:?}", instr);
+        }
+    }
+
+    #[test]
+    fn sbc_imm_test_zero() {
+        let (mut cpu, mut mem) = generate_cpu_and_mem();
+        mem.write(0, 0xE9);
+        mem.write(1, 0x01);
+        cpu.a = 0x02;
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        if let Instruction::SBC(mode, time) = instr {
+            let cycles = instruction_func::sbc(&mut cpu, &mem, mode, *time);
+            assert_eq!(cpu.a, 0x00);
+            assert_eq!(cycles, 2);
+            assert_eq!(cpu.p.z, true);
+            assert_eq!(cpu.p.n, false);
+            assert_eq!(cpu.p.c, false);
+            assert_eq!(cpu.p.v, false);
+        } else {
+            panic!("Wrong instruction, got {:?}", instr);
+        }
+    }
+
+    #[test]
+    fn sbc_imm_test_neg() {
+        let (mut cpu, mut mem) = generate_cpu_and_mem();
+        mem.write(0, 0xE9);
+        mem.write(1, 0x30);
+        cpu.a = 0xD0;
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        if let Instruction::SBC(mode, time) = instr {
+            let cycles = instruction_func::sbc(&mut cpu, &mem, mode, *time); // will do 1 + -2
+            assert_eq!(cpu.a, 0x9F);
+            assert_eq!(cycles, 2);
+            assert_eq!(cpu.p.z, false);
+            assert_eq!(cpu.p.n, true);
+            assert_eq!(cpu.p.c, false);
+            assert_eq!(cpu.p.v, false);
+        } else {
+            panic!("Wrong instruction, got {:?}", instr);
+        }
+    }
+
+    #[test]
+    fn sbc_imm_test_no_carry_overflow() {
+        let (mut cpu, mut mem) = generate_cpu_and_mem();
+        mem.write(0, 0xE9);
+        mem.write(1, 0x70);
+        cpu.a = 0xD0;
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        if let Instruction::SBC(mode, time) = instr {
+            let cycles = instruction_func::sbc(&mut cpu, &mem, mode, *time);
+            assert_eq!(cpu.a, 0x5F);
+            assert_eq!(cycles, 2);
+            assert_eq!(cpu.p.z, false);
+            assert_eq!(cpu.p.n, false);
+            assert_eq!(cpu.p.c, false);
+            assert_eq!(cpu.p.v, true);
+        } else {
+            panic!("Wrong instruction, got {:?}", instr);
+        }
+    }
+
+    #[test]
+    fn sbc_imm_test_carry_no_overflow() {
+        let (mut cpu, mut mem) = generate_cpu_and_mem();
+        mem.write(0, 0xE9);
+        mem.write(1, 0xF0);
+        cpu.a = 0xD0;
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        if let Instruction::SBC(mode, time) = instr {
+            let cycles = instruction_func::sbc(&mut cpu, &mem, mode, *time);
+            assert_eq!(cpu.a, 0xDF);
+            assert_eq!(cycles, 2);
+            assert_eq!(cpu.p.z, false);
+            assert_eq!(cpu.p.n, true);
+            assert_eq!(cpu.p.c, true);
+            assert_eq!(cpu.p.v, false);
+        } else {
+            panic!("Wrong instruction, got {:?}", instr);
+        }
+    }
+
+    #[test]
+    fn sbc_imm_test_carry_overflow() {
+        let (mut cpu, mut mem) = generate_cpu_and_mem();
+        mem.write(0, 0xE9);
+        mem.write(1, 0xB0);
+        cpu.a = 0x50;
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        if let Instruction::SBC(mode, time) = instr {
+            let cycles = instruction_func::sbc(&mut cpu, &mem, mode, *time);
+            assert_eq!(cpu.a, 0x9F);
+            assert_eq!(cycles, 2);
+            assert_eq!(cpu.p.z, false);
+            assert_eq!(cpu.p.n, true);
+            assert_eq!(cpu.p.c, true);
+            assert_eq!(cpu.p.v, true);
+        } else {
+            panic!("Wrong instruction, got {:?}", instr);
         }
     }
 }

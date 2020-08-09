@@ -103,6 +103,7 @@ impl CPU {
             Instruction::LDA(mode, time) => instruction_func::lda(self, memory, mode, *time),
             Instruction::LDX(mode, time) => instruction_func::ldx(self, memory, mode, *time),
             Instruction::LDY(mode, time) => instruction_func::ldy(self, memory, mode, *time),
+            Instruction::NOP(mode, time) => instruction_func::nop(self, memory, mode, *time),
             Instruction::ORA(mode, time) => instruction_func::ora(self, memory, mode, *time),
             Instruction::SEC(mode, time) => instruction_func::sec(self, memory, mode, *time),
             Instruction::SED(mode, time) => instruction_func::sed(self, memory, mode, *time),
@@ -110,6 +111,7 @@ impl CPU {
             Instruction::STA(mode, time) => instruction_func::sta(self, memory, mode, *time),
             Instruction::STX(mode, time) => instruction_func::stx(self, memory, mode, *time),
             Instruction::STY(mode, time) => instruction_func::sty(self, memory, mode, *time),
+            Instruction::SBC(mode, time) => instruction_func::sbc(self, memory, mode, *time),
             _ => panic!("{:?} has not been implemented!")
         };
 
