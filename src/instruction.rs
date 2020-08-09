@@ -435,6 +435,54 @@ pub mod instruction_func {
         cycles
     }
 
+    pub fn clc(cpu: &mut CPU, memory: &Memory, mode: &AddressingMode, time: usize) -> usize {
+        let (_, _) = match *mode {
+            AddressingMode::Implied =>
+                get_operand_using_addr_mode(mode, cpu, memory),
+            _ => panic!("Unsupported addressing mode {:?} for CLC", *mode),
+        };
+
+        cpu.p.c = false;
+        
+        time
+    }
+
+    pub fn cld(cpu: &mut CPU, memory: &Memory, mode: &AddressingMode, time: usize) -> usize {
+        let (_, _) = match *mode {
+            AddressingMode::Implied =>
+                get_operand_using_addr_mode(mode, cpu, memory),
+            _ => panic!("Unsupported addressing mode {:?} for CLD", *mode),
+        };
+        
+        // nes does not use the decimal flag, so do nothing
+        
+        time
+    }
+
+    pub fn cli(cpu: &mut CPU, memory: &Memory, mode: &AddressingMode, time: usize) -> usize {
+        let (_, _) = match *mode {
+            AddressingMode::Implied =>
+                get_operand_using_addr_mode(mode, cpu, memory),
+            _ => panic!("Unsupported addressing mode {:?} for CLI", *mode),
+        };
+        
+        cpu.p.i = false;
+        
+        time
+    }
+
+    pub fn clv(cpu: &mut CPU, memory: &Memory, mode: &AddressingMode, time: usize) -> usize {
+        let (_, _) = match *mode {
+            AddressingMode::Implied =>
+                get_operand_using_addr_mode(mode, cpu, memory),
+            _ => panic!("Unsupported addressing mode {:?} for CLV", *mode),
+        };
+        
+        cpu.p.v = false;
+        
+        time
+    }
+
     pub fn eor(cpu: &mut CPU, memory: &Memory, mode: &AddressingMode, time: usize) -> usize {
         
         let (operand, extra_cycles) = match *mode {
@@ -486,7 +534,7 @@ pub mod instruction_func {
         let (_, _) = match *mode {
             AddressingMode::Implied =>
                 get_operand_using_addr_mode(mode, cpu, memory),
-            _ => panic!("Unsupported addressing mode {:?} for INC", *mode),
+            _ => panic!("Unsupported addressing mode {:?} for INX", *mode),
         };
 
         cpu.x = cpu.x.overflowing_add(1).0;
@@ -502,7 +550,7 @@ pub mod instruction_func {
         let (_, _) = match *mode {
             AddressingMode::Implied =>
                 get_operand_using_addr_mode(mode, cpu, memory),
-            _ => panic!("Unsupported addressing mode {:?} for INC", *mode),
+            _ => panic!("Unsupported addressing mode {:?} for INY", *mode),
         };
 
         cpu.y = cpu.y.overflowing_add(1).0;
@@ -617,6 +665,42 @@ pub mod instruction_func {
 
         let cycles = time + extra_cycles;
         cycles
+    }
+
+    pub fn sec(cpu: &mut CPU, memory: &Memory, mode: &AddressingMode, time: usize) -> usize {
+        let (_, _) = match *mode {
+            AddressingMode::Implied =>
+                get_operand_using_addr_mode(mode, cpu, memory),
+            _ => panic!("Unsupported addressing mode {:?} for SEC", *mode),
+        };
+
+        cpu.p.c = true;
+        
+        time
+    }
+
+    pub fn sed(cpu: &mut CPU, memory: &Memory, mode: &AddressingMode, time: usize) -> usize {
+        let (_, _) = match *mode {
+            AddressingMode::Implied =>
+                get_operand_using_addr_mode(mode, cpu, memory),
+            _ => panic!("Unsupported addressing mode {:?} for SED", *mode),
+        };
+        
+        // nes does not use the decimal flag, so do nothing
+        
+        time
+    }
+
+    pub fn sei(cpu: &mut CPU, memory: &Memory, mode: &AddressingMode, time: usize) -> usize {
+        let (_, _) = match *mode {
+            AddressingMode::Implied =>
+                get_operand_using_addr_mode(mode, cpu, memory),
+            _ => panic!("Unsupported addressing mode {:?} for SEI", *mode),
+        };
+        
+        cpu.p.i = true;
+        
+        time
     }
 
     pub fn sta(cpu: &mut CPU, memory: &mut Memory, mode: &AddressingMode, time: usize) -> usize {
