@@ -3,7 +3,7 @@ use crate::memory::Memory;
 
 use std::collections::HashMap;
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum AddressingMode {
     ZeroPage, // the address in zero page (high byte is 00)
     ZeroPageX,
@@ -442,6 +442,36 @@ pub mod instruction_func {
         cycles
     }
 
+    pub fn asl(cpu: &mut CPU, memory: &mut Memory, mode: &AddressingMode, time: usize) -> usize {
+        
+        let (operand, _) = match *mode {
+            AddressingMode::Accumulator | AddressingMode::ZeroPage | AddressingMode::ZeroPageX
+            | AddressingMode::Absolute | AddressingMode::AbsoluteX =>
+                get_operand_using_addr_mode(mode, cpu, memory),
+            _ => panic!("Unsupported addressing mode {:?} for ASL", *mode),
+        };
+
+        let (old_val, new_val) = {
+            if *mode == AddressingMode::Accumulator {
+                let old = cpu.a;
+                cpu.a = cpu.a << 1;
+                (old, cpu.a)
+            } else {
+                let mut op = memory.read(operand);
+                let old = op;
+                op = op << 1;
+                memory.write(operand, op);
+                (old, op)
+            }
+        };
+
+        cpu.p.c = ((old_val & 0x80) >> 7) != 0; // set to contents of old bit 7
+        cpu.p.z = new_val == 0;
+        cpu.p.n = CPU::check_if_neg(new_val);
+
+        time
+    }
+
     pub fn clc(cpu: &mut CPU, memory: &Memory, mode: &AddressingMode, time: usize) -> usize {
         let (_, _) = match *mode {
             AddressingMode::Implied =>
@@ -780,6 +810,36 @@ pub mod instruction_func {
         cycles
     }
 
+    pub fn lsr(cpu: &mut CPU, memory: &mut Memory, mode: &AddressingMode, time: usize) -> usize {
+        
+        let (operand, _) = match *mode {
+            AddressingMode::Accumulator | AddressingMode::ZeroPage | AddressingMode::ZeroPageX
+            | AddressingMode::Absolute | AddressingMode::AbsoluteX =>
+                get_operand_using_addr_mode(mode, cpu, memory),
+            _ => panic!("Unsupported addressing mode {:?} for LSR", *mode),
+        };
+
+        let (old_val, new_val) = {
+            if *mode == AddressingMode::Accumulator {
+                let old = cpu.a;
+                cpu.a = cpu.a >> 1;
+                (old, cpu.a)
+            } else {
+                let mut op = memory.read(operand);
+                let old = op;
+                op = op >> 1;
+                memory.write(operand, op);
+                (old, op)
+            }
+        };
+
+        cpu.p.c = old_val & 0x01 != 0; // set to contents of old bit 0
+        cpu.p.z = new_val == 0;
+        cpu.p.n = false; // bit 7 is always set to 0
+
+        time
+    }
+
     pub fn nop(cpu: &mut CPU, memory: &Memory, mode: &AddressingMode, time: usize) -> usize {
         let (_, _) = match *mode {
             AddressingMode::Implied =>
@@ -817,7 +877,95 @@ pub mod instruction_func {
         cycles
     }
 
+    pub fn pha(cpu: &mut CPU, memory: &mut Memory, mode: &AddressingMode, time: usize) -> usize {
+        
+        let (_, _) = match *mode {
+            AddressingMode::Implied =>
+                get_operand_using_addr_mode(mode, cpu, memory),
+            _ => panic!("Unsupported addressing mode {:?} for PHA", *mode),
+        };
+
+        cpu.push_stack(memory, cpu.a);
+
+        time
+    }
+
+    pub fn php(cpu: &mut CPU, memory: &mut Memory, mode: &AddressingMode, time: usize) -> usize {
+        
+        let (_, _) = match *mode {
+            AddressingMode::Implied =>
+                get_operand_using_addr_mode(mode, cpu, memory),
+            _ => panic!("Unsupported addressing mode {:?} for PHP", *mode),
+        };
+
+        cpu.push_stack(memory, cpu.p.as_u8());
+
+        time
+    }
+
+    pub fn pla(cpu: &mut CPU, memory: &mut Memory, mode: &AddressingMode, time: usize) -> usize {
+        
+        let (_, _) = match *mode {
+            AddressingMode::Implied =>
+                get_operand_using_addr_mode(mode, cpu, memory),
+            _ => panic!("Unsupported addressing mode {:?} for PLA", *mode),
+        };
+
+        let a = cpu.pop_stack(memory);
+
+        cpu.a = a;
+        cpu.p.n = CPU::check_if_neg(a);
+        cpu.p.z = a == 0;
+
+        time
+    }
+
+    pub fn plp(cpu: &mut CPU, memory: &mut Memory, mode: &AddressingMode, time: usize) -> usize {
+        
+        let (_, _) = match *mode {
+            AddressingMode::Implied =>
+                get_operand_using_addr_mode(mode, cpu, memory),
+            _ => panic!("Unsupported addressing mode {:?} for PLP", *mode),
+        };
+
+        let p = cpu.pop_stack(memory);
+
+        cpu.p.from_u8(p);
+
+        time
+    }
+
+    pub fn rol(cpu: &mut CPU, memory: &mut Memory, mode: &AddressingMode, time: usize) -> usize {
+        let (operand, _) = match *mode {
+            AddressingMode::Accumulator | AddressingMode::ZeroPage | AddressingMode::ZeroPageX
+            | AddressingMode::Absolute | AddressingMode::AbsoluteX =>
+                get_operand_using_addr_mode(mode, cpu, memory),
+            _ => panic!("Unsupported addressing mode {:?} for ASL", *mode),
+        };
+
+        let (old_val, new_val) = {
+            if *mode == AddressingMode::Accumulator {
+                let old = cpu.a;
+                cpu.a = cpu.a << 1;
+                (old, cpu.a)
+            } else {
+                let mut op = memory.read(operand);
+                let old = op;
+                op = op << 1;
+                memory.write(operand, op);
+                (old, op)
+            }
+        };
+
+        cpu.p.c = ((old_val & 0x80) >> 7) != 0; // set to contents of old bit 7
+        cpu.p.z = new_val == 0;
+        cpu.p.n = CPU::check_if_neg(new_val);
+
+        time
+    }
+
     pub fn sec(cpu: &mut CPU, memory: &Memory, mode: &AddressingMode, time: usize) -> usize {
+
         let (_, _) = match *mode {
             AddressingMode::Implied =>
                 get_operand_using_addr_mode(mode, cpu, memory),
@@ -932,6 +1080,94 @@ pub mod instruction_func {
         cpu.a = result;
         let cycles = time + extra_cycles;
         cycles
+    }
+
+    pub fn tax(cpu: &mut CPU, memory: &Memory, mode: &AddressingMode, time: usize) -> usize {
+        
+        let (_, _) = match *mode {
+            AddressingMode::Implied =>
+                get_operand_using_addr_mode(mode, cpu, memory),
+            _ => panic!("Unsupported addressing mode {:?} for TAX", *mode),
+        };
+
+        cpu.x = cpu.a;
+        cpu.p.z = cpu.x == 0;
+        cpu.p.n = CPU::check_if_neg(cpu.x);
+
+        time
+    }
+
+    pub fn tay(cpu: &mut CPU, memory: &Memory, mode: &AddressingMode, time: usize) -> usize {
+        
+        let (_, _) = match *mode {
+            AddressingMode::Implied =>
+                get_operand_using_addr_mode(mode, cpu, memory),
+            _ => panic!("Unsupported addressing mode {:?} for TAY", *mode),
+        };
+
+        cpu.y = cpu.a;
+        cpu.p.z = cpu.y == 0;
+        cpu.p.n = CPU::check_if_neg(cpu.y);
+
+        time
+    }
+
+    pub fn tsx(cpu: &mut CPU, memory: &Memory, mode: &AddressingMode, time: usize) -> usize {
+        
+        let (_, _) = match *mode {
+            AddressingMode::Implied =>
+                get_operand_using_addr_mode(mode, cpu, memory),
+            _ => panic!("Unsupported addressing mode {:?} for TSX", *mode),
+        };
+
+        cpu.x = cpu.sp;
+        cpu.p.z = cpu.x == 0;
+        cpu.p.n = CPU::check_if_neg(cpu.x);
+
+        time
+    }
+
+    pub fn txa(cpu: &mut CPU, memory: &Memory, mode: &AddressingMode, time: usize) -> usize {
+        
+        let (_, _) = match *mode {
+            AddressingMode::Implied =>
+                get_operand_using_addr_mode(mode, cpu, memory),
+            _ => panic!("Unsupported addressing mode {:?} for TXA", *mode),
+        };
+
+        cpu.a = cpu.x;
+        cpu.p.z = cpu.a == 0;
+        cpu.p.n = CPU::check_if_neg(cpu.a);
+
+        time
+    }
+
+    pub fn txs(cpu: &mut CPU, memory: &Memory, mode: &AddressingMode, time: usize) -> usize {
+        
+        let (_, _) = match *mode {
+            AddressingMode::Implied =>
+                get_operand_using_addr_mode(mode, cpu, memory),
+            _ => panic!("Unsupported addressing mode {:?} for TXS", *mode),
+        };
+
+        cpu.sp = cpu.x;
+
+        time
+    }
+
+    pub fn tya(cpu: &mut CPU, memory: &Memory, mode: &AddressingMode, time: usize) -> usize {
+        
+        let (_, _) = match *mode {
+            AddressingMode::Implied =>
+                get_operand_using_addr_mode(mode, cpu, memory),
+            _ => panic!("Unsupported addressing mode {:?} for TYA", *mode),
+        };
+
+        cpu.a = cpu.y;
+        cpu.p.z = cpu.a == 0;
+        cpu.p.n = CPU::check_if_neg(cpu.a);
+
+        time
     }
 }
 
@@ -1112,6 +1348,80 @@ mod tests {
             assert_eq!(cycles, 2);
             assert_eq!(cpu.p.z, false);
             assert_eq!(cpu.p.n, true);
+        } else {
+            panic!("Wrong instruction, got {:?}", instr);
+        }
+    }
+
+    #[test]
+    fn asl_acc_test() {
+        let (mut cpu, mut mem) = generate_cpu_and_mem();
+        mem.write(0, 0x0A);
+        cpu.a = 0x01;
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        if let Instruction::ASL(mode, time) = instr {
+            let cycles = instruction_func::asl(&mut cpu, &mut mem, mode, *time);
+            assert_eq!(cpu.a, 0x02);
+            assert_eq!(cycles, 2);
+            assert_eq!(cpu.p.c, false);
+            assert_eq!(cpu.p.z, false);
+            assert_eq!(cpu.p.n, false);
+        } else {
+            panic!("Wrong instruction, got {:?}", instr);
+        }
+    }
+
+    #[test]
+    fn asl_acc_carry_and_zero_test() {
+        let (mut cpu, mut mem) = generate_cpu_and_mem();
+        mem.write(0, 0x0A);
+        cpu.a = 0x80;
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        if let Instruction::ASL(mode, time) = instr {
+            let cycles = instruction_func::asl(&mut cpu, &mut mem, mode, *time);
+            assert_eq!(cpu.a, 0x00);
+            assert_eq!(cycles, 2);
+            assert_eq!(cpu.p.c, true);
+            assert_eq!(cpu.p.z, true);
+            assert_eq!(cpu.p.n, false);
+        } else {
+            panic!("Wrong instruction, got {:?}", instr);
+        }
+    }
+
+    #[test]
+    fn asl_acc_neg_test() {
+        let (mut cpu, mut mem) = generate_cpu_and_mem();
+        mem.write(0, 0x0A);
+        cpu.a = 0x40;
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        if let Instruction::ASL(mode, time) = instr {
+            let cycles = instruction_func::asl(&mut cpu, &mut mem, mode, *time);
+            assert_eq!(cpu.a, 0x80);
+            assert_eq!(cycles, 2);
+            assert_eq!(cpu.p.c, false);
+            assert_eq!(cpu.p.z, false);
+            assert_eq!(cpu.p.n, true);
+        } else {
+            panic!("Wrong instruction, got {:?}", instr);
+        }
+    }
+
+    #[test]
+    fn asl_abs_test() {
+        let (mut cpu, mut mem) = generate_cpu_and_mem();
+        mem.write(0, 0x0E);
+        mem.write(1, 0x40);
+        mem.write(2, 0x01);
+        mem.write(0x0140, 0x01);
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        if let Instruction::ASL(mode, time) = instr {
+            let cycles = instruction_func::asl(&mut cpu, &mut mem, mode, *time);
+            assert_eq!(mem.read(0x0140), 0x02);
+            assert_eq!(cycles, 6);
+            assert_eq!(cpu.p.c, false);
+            assert_eq!(cpu.p.z, false);
+            assert_eq!(cpu.p.n, false);
         } else {
             panic!("Wrong instruction, got {:?}", instr);
         }
@@ -2211,6 +2521,62 @@ mod tests {
     }
 
     #[test]
+    fn lsr_acc_test() {
+        let (mut cpu, mut mem) = generate_cpu_and_mem();
+        mem.write(0, 0x4A);
+        cpu.a = 0x02;
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        if let Instruction::LSR(mode, time) = instr {
+            let cycles = instruction_func::lsr(&mut cpu, &mut mem, mode, *time);
+            assert_eq!(cpu.a, 0x01);
+            assert_eq!(cycles, 2);
+            assert_eq!(cpu.p.c, false);
+            assert_eq!(cpu.p.z, false);
+            assert_eq!(cpu.p.n, false);
+        } else {
+            panic!("Wrong instruction, got {:?}", instr);
+        }
+    }
+
+    #[test]
+    fn lsr_acc_carry_and_zero_test() {
+        let (mut cpu, mut mem) = generate_cpu_and_mem();
+        mem.write(0, 0x4A);
+        cpu.a = 0x01;
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        if let Instruction::LSR(mode, time) = instr {
+            let cycles = instruction_func::lsr(&mut cpu, &mut mem, mode, *time);
+            assert_eq!(cpu.a, 0x00);
+            assert_eq!(cycles, 2);
+            assert_eq!(cpu.p.c, true);
+            assert_eq!(cpu.p.z, true);
+            assert_eq!(cpu.p.n, false);
+        } else {
+            panic!("Wrong instruction, got {:?}", instr);
+        }
+    }
+
+    #[test]
+    fn lsr_abs_test() {
+        let (mut cpu, mut mem) = generate_cpu_and_mem();
+        mem.write(0, 0x4E);
+        mem.write(1, 0x40);
+        mem.write(2, 0x01);
+        mem.write(0x0140, 0x02);
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        if let Instruction::LSR(mode, time) = instr {
+            let cycles = instruction_func::lsr(&mut cpu, &mut mem, mode, *time);
+            assert_eq!(mem.read(0x0140), 0x01);
+            assert_eq!(cycles, 6);
+            assert_eq!(cpu.p.c, false);
+            assert_eq!(cpu.p.z, false);
+            assert_eq!(cpu.p.n, false);
+        } else {
+            panic!("Wrong instruction, got {:?}", instr);
+        }
+    }
+
+    #[test]
     fn ora_imm_test() {
         let (mut cpu, mut mem) = generate_cpu_and_mem();
         mem.write(0, 0x09);
@@ -2264,6 +2630,122 @@ mod tests {
         }
     }
 
+    #[test]
+    fn pha_test() {
+        let (mut cpu, mut mem) = generate_cpu_and_mem();
+        cpu.sp = 0xFF;
+        cpu.a = 0xBE;
+        mem.write(0, 0x48);
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        if let Instruction::PHA(mode, time) = instr {
+            let cycles = instruction_func::pha(&mut cpu, &mut mem, mode, *time);
+            assert_eq!(cycles, 3);
+            assert_eq!(mem.read(0x01FF), 0xBE);
+            assert_eq!(cpu.sp, 0xFE);
+        } else {
+            panic!("Wrong instruction, got {:?}", instr);
+        }
+    }
+
+    #[test]
+    fn php_test() {
+        let (mut cpu, mut mem) = generate_cpu_and_mem();
+        cpu.sp = 0xFF;
+        cpu.p.n = true;
+        cpu.p.c = true;
+        mem.write(0, 0x08);
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        if let Instruction::PHP(mode, time) = instr {
+            let cycles = instruction_func::php(&mut cpu, &mut mem, mode, *time);
+            assert_eq!(cycles, 3);
+            assert_eq!(mem.read(0x01FF), 0x81);
+            assert_eq!(cpu.sp, 0xFE);
+        } else {
+            panic!("Wrong instruction, got {:?}", instr);
+        }
+    }
+
+    #[test]
+    fn pla_test() {
+        let (mut cpu, mut mem) = generate_cpu_and_mem();
+        cpu.sp = 0xFE;
+        mem.write(0x01FF, 0x7F);
+        mem.write(0, 0x68);
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        if let Instruction::PLA(mode, time) = instr {
+            let cycles = instruction_func::pla(&mut cpu, &mut mem, mode, *time);
+            assert_eq!(cycles, 4);
+            assert_eq!(cpu.a, 0x7F);
+            assert_eq!(cpu.sp, 0xFF);
+            assert_eq!(cpu.p.n, false);
+            assert_eq!(cpu.p.z, false);
+        } else {
+            panic!("Wrong instruction, got {:?}", instr);
+        }
+    }
+
+    fn pla_zero_test() {
+        let (mut cpu, mut mem) = generate_cpu_and_mem();
+        cpu.sp = 0xFE;
+        cpu.a = 0xFF;
+        mem.write(0x01FF, 0x00);
+        mem.write(0, 0x68);
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        if let Instruction::PLA(mode, time) = instr {
+            let cycles = instruction_func::pla(&mut cpu, &mut mem, mode, *time);
+            assert_eq!(cycles, 4);
+            assert_eq!(cpu.a, 0x00);
+            assert_eq!(cpu.sp, 0xFF);
+            assert_eq!(cpu.p.n, false);
+            assert_eq!(cpu.p.z, true);
+        } else {
+            panic!("Wrong instruction, got {:?}", instr);
+        }
+        
+    }
+
+    fn pla_neg_test() {
+        let (mut cpu, mut mem) = generate_cpu_and_mem();
+        cpu.sp = 0xFE;
+        mem.write(0x01FF, 0xFF);
+        mem.write(0, 0x68);
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        if let Instruction::PLA(mode, time) = instr {
+            let cycles = instruction_func::pla(&mut cpu, &mut mem, mode, *time);
+            assert_eq!(cycles, 4);
+            assert_eq!(cpu.a, 0xFF);
+            assert_eq!(cpu.sp, 0xFF);
+            assert_eq!(cpu.p.n, true);
+            assert_eq!(cpu.p.z, false);
+        } else {
+            panic!("Wrong instruction, got {:?}", instr);
+        }
+        
+    }
+
+    #[test]
+    fn plp_test() {
+        let (mut cpu, mut mem) = generate_cpu_and_mem();
+        cpu.sp = 0xFE;
+        mem.write(0x01FF, 0xFF);
+        mem.write(0, 0x28);
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        if let Instruction::PLP(mode, time) = instr {
+            let cycles = instruction_func::plp(&mut cpu, &mut mem, mode, *time);
+            assert_eq!(cycles, 4);
+            assert_eq!(cpu.sp, 0xFF);
+            assert_eq!(cpu.p.c, true);
+            assert_eq!(cpu.p.z, true);
+            assert_eq!(cpu.p.i, true);
+            assert_eq!(cpu.p.d, true);
+            assert_eq!(cpu.p.b, true);
+            assert_eq!(cpu.p.v, true);
+            assert_eq!(cpu.p.n, true);
+        } else {
+            panic!("Wrong instruction, got {:?}", instr);
+        }
+        
+    }
 
     #[test]
     fn sta_zp_test() {
