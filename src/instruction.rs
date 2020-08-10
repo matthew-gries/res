@@ -731,6 +731,25 @@ pub mod instruction_func {
         time
     }
 
+    pub fn jsr(cpu: &mut CPU, memory: &mut Memory, mode: &AddressingMode, time: usize) -> usize {
+
+        let (operand, _) = match *mode {
+            AddressingMode::Absolute =>
+                get_operand_using_addr_mode(mode, cpu, memory),
+            _ => panic!("Unsupported addressing mod {:?} for JSR", *mode),
+        };
+
+        let ret_addr = cpu.pc.overflowing_sub(1).0;
+        let ret_addr_low_byte = (ret_addr & 0x00FF) as u8;
+        let ret_addr_high_byte = ((ret_addr & 0xFF00) >> 8) as u8;
+        cpu.push_stack(memory, ret_addr_low_byte);
+        cpu.push_stack(memory, ret_addr_high_byte);
+
+        cpu.pc = operand;
+
+        time
+    }
+
     pub fn lda(cpu: &mut CPU, memory: &Memory, mode: &AddressingMode, time: usize) -> usize {
 
         let (operand, extra_cycles) = match *mode {
@@ -994,6 +1013,44 @@ pub mod instruction_func {
         cpu.p.c = old_val & 0x01 != 0; // set to contents of old bit 0
         cpu.p.z = new_val == 0;
         cpu.p.n = CPU::check_if_neg(new_val);
+
+        time
+    }
+
+    pub fn rti(cpu: &mut CPU, memory: &mut Memory, mode: &AddressingMode, time: usize) -> usize {
+        
+        let (_, _) = match *mode {
+            AddressingMode::Implied =>
+                get_operand_using_addr_mode(mode, cpu, memory),
+            _ => panic!("Unsupported addressing mode {:?} for RTI", *mode),
+        };
+
+        let flags = cpu.pop_stack(memory);
+        let pc_high = cpu.pop_stack(memory);
+        let pc_low = cpu.pop_stack(memory);
+
+        let pc = ((pc_high as u16) << 8) | (pc_low as u16);
+
+        cpu.p.from_u8(flags);
+        cpu.pc = pc;
+
+        time
+    }
+
+    pub fn rts(cpu: &mut CPU, memory: &mut Memory, mode: &AddressingMode, time: usize) -> usize {
+        
+        let (_, _) = match *mode {
+            AddressingMode::Implied =>
+                get_operand_using_addr_mode(mode, cpu, memory),
+            _ => panic!("Unsupported addressing mode {:?} for RTS", *mode),
+        };
+
+        let high_byte = cpu.pop_stack(memory);
+        let low_byte = cpu.pop_stack(memory);
+        let new_pc = ((high_byte as u16) << 8) | (low_byte as u16);
+        let new_pc = new_pc + 1;
+
+        cpu.pc = new_pc;
 
         time
     }
@@ -1887,7 +1944,8 @@ mod tests {
         }
     }
 
-    #[test]
+    
+#[test]
     fn inc_zp_test() {
         let (mut cpu, mut mem) = generate_cpu_and_mem();
         mem.write(0x00FF, 1);
@@ -2072,6 +2130,27 @@ mod tests {
             assert_eq!(cycles, 2);
             assert_eq!(cpu.p.z, false);
             assert_eq!(cpu.p.n, true);
+        } else {
+            panic!("Wrong instruction, got {:?}", instr);
+        }
+    }
+
+    #[test]
+    fn jsr_test() {
+        
+        let (mut cpu, mut mem) = generate_cpu_and_mem();
+        mem.write(0x0240, 0x20);
+        mem.write(0x0241, 0x40);
+        mem.write(0x0242, 0x01);
+        cpu.pc = 0x0240;
+        cpu.sp = 0xFF;
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        if let Instruction::JSR(mode, time) = instr {
+            let cycles = instruction_func::jsr(&mut cpu, &mut mem, mode, *time);
+            assert_eq!(cpu.pc, 0x0140);
+            assert_eq!(mem.read(0x01FF), 0x42);
+            assert_eq!(mem.read(0x01FE), 0x02);
+            assert_eq!(cycles, 6);
         } else {
             panic!("Wrong instruction, got {:?}", instr);
         }
@@ -2886,6 +2965,7 @@ mod tests {
         }
     }
 
+    #[test]
     fn pla_zero_test() {
         let (mut cpu, mut mem) = generate_cpu_and_mem();
         cpu.sp = 0xFE;
@@ -2906,6 +2986,7 @@ mod tests {
         
     }
 
+    #[test]
     fn pla_neg_test() {
         let (mut cpu, mut mem) = generate_cpu_and_mem();
         cpu.sp = 0xFE;
@@ -2946,7 +3027,50 @@ mod tests {
         } else {
             panic!("Wrong instruction, got {:?}", instr);
         }
-        
+    }
+
+    #[test]
+    fn rts_test() {
+        let (mut cpu, mut mem) = generate_cpu_and_mem();
+        mem.write(0, 0x60);
+        mem.write(0x01FF, 0x42);
+        mem.write(0x01FE, 0x02);
+        cpu.sp = 0xFD;
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        if let Instruction::RTS(mode, time) = instr {
+            let cycles = instruction_func::rts(&mut cpu, &mut mem, mode, *time);
+            assert_eq!(cycles, 6);
+            assert_eq!(cpu.pc, 0x0243);
+            assert_eq!(cpu.sp, 0xFF);
+        } else {
+            panic!("Wrong instruction, got {:?}", instr);
+        }
+    }
+
+    #[test]
+    fn rti_test() {
+        let (mut cpu, mut mem) = generate_cpu_and_mem();
+        mem.write(0, 0x40);
+        mem.write(0x01FF, 0x43);
+        mem.write(0x01FE, 0x02);
+        mem.write(0x01FD, 0xFF);
+        cpu.sp = 0xFC;
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        if let Instruction::RTI(mode, time) = instr {
+            let cycles = instruction_func::rti(&mut cpu, &mut mem, mode, *time);
+            assert_eq!(cycles, 6);
+            assert_eq!(cpu.pc, 0x0243);
+            assert_eq!(cpu.sp, 0xFF);
+            assert_eq!(cpu.p.c, true);
+            assert_eq!(cpu.p.z, true);
+            assert_eq!(cpu.p.i, true);
+            assert_eq!(cpu.p.d, true);
+            assert_eq!(cpu.p.b, true);
+            assert_eq!(cpu.p.v, true);
+            assert_eq!(cpu.p.n, true);
+        } else {
+            panic!("Wrong instruction, got {:?}", instr);
+        }
     }
 
     #[test]
