@@ -128,6 +128,8 @@ impl CPU {
             Instruction::ADC(mode, time) => instruction_func::adc(self, memory, mode, *time),
             Instruction::AND(mode, time) => instruction_func::and(self, memory, mode, *time),
             Instruction::ASL(mode, time) => instruction_func::asl(self, memory, mode, *time),
+            Instruction::BIT(mode, time) => instruction_func::bit(self, memory, mode, *time),
+            Instruction::BRK(mode, time) => instruction_func::brk(self, memory, mode, *time),
             Instruction::CLC(mode, time) => instruction_func::clc(self, memory, mode, *time),
             Instruction::CLD(mode, time) => instruction_func::cld(self, memory, mode, *time),
             Instruction::CLI(mode, time) => instruction_func::cli(self, memory, mode, *time),

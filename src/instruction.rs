@@ -53,6 +53,7 @@ pub fn get_operand_using_addr_mode(mode: &AddressingMode, cpu: &mut CPU, memory:
             let addr_old = ((high_byte as u16) << 8) | low_byte as u16;
             let (addr, _) = addr_old.overflowing_add(cpu.x as u16);
             let cycles = {
+
                 if Memory::check_if_page_crossed(addr_old, addr) {
                     1
                 } else {
@@ -469,6 +470,47 @@ pub mod instruction_func {
         cpu.p.z = new_val == 0;
         cpu.p.n = CPU::check_if_neg(new_val);
 
+        time
+    }
+
+    pub fn bit(cpu: &mut CPU, memory: &mut Memory, mode: &AddressingMode, time: usize) -> usize {
+
+        let (operand, _) = match *mode {
+            AddressingMode::ZeroPage | AddressingMode::Absolute =>
+                get_operand_using_addr_mode(mode, cpu, memory),
+            _ => panic!("Unsupported addressing mode {:?} for BIT", *mode),
+        };
+
+        let result = memory.read(operand);
+
+        cpu.p.z = (result & cpu.a) == 0;
+        cpu.p.n = (result & 0x80 >> 7) != 0;
+        cpu.p.v = (result & 0x40 >> 6) != 0;
+        
+        time
+    }
+
+    pub fn brk(cpu: &mut CPU, memory: &mut Memory, mode: &AddressingMode, time: usize) -> usize {
+        let (_, _) = match *mode {
+            AddressingMode::Implied =>
+                get_operand_using_addr_mode(mode, cpu, memory),
+            _ => panic!("Unsupported addressing mode {:?} for BRK", *mode),
+        };
+
+        let pc_low_byte = (cpu.pc & 0x00FF) as u8;
+        let pc_high_byte = ((cpu.pc & 0xFF00) >> 8) as u8;
+        let flags = cpu.p.as_u8();
+
+        cpu.push_stack(memory, pc_low_byte);
+        cpu.push_stack(memory, pc_high_byte);
+        cpu.push_stack(memory, flags);
+
+        let irq_vector = ((memory.read(0xFFFE) as u16) << 8) | memory.read(0xFFFF) as u16;
+
+        cpu.pc = irq_vector;
+
+        cpu.p.b = true;
+        
         time
     }
 
@@ -1516,6 +1558,51 @@ mod tests {
         } else {
             panic!("Wrong instruction, got {:?}", instr);
         }
+    }
+
+    #[test]
+    fn bit_test() {
+        let (mut cpu, mut mem) = generate_cpu_and_mem();
+        mem.write(0, 0x24);
+        mem.write(1, 0x40);
+        mem.write(0x0040, 0xE1);
+        cpu.a = 2;
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        if let Instruction::BIT(mode, time) = instr {
+            let cycles = instruction_func::bit(&mut cpu, &mut mem, mode, *time);
+            assert_eq!(cycles, 3);
+            assert_eq!(cpu.p.z, true);
+            assert_eq!(cpu.p.n, true);
+            assert_eq!(cpu.p.v, true);
+        } else {
+            panic!("Wrong instruction, got {:?}", instr);
+        }
+
+    }
+
+    #[test]
+    fn brk_test() {
+        let (mut cpu, mut mem) = generate_cpu_and_mem();
+        cpu.pc = 0x1234;
+        mem.write(0, 0x00);
+        mem.write(0xFFFE, 0x56);
+        mem.write(0xFFFF, 0x12);
+        cpu.sp = 0xFF;
+        cpu.p.n = true;
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        if let Instruction::BRK(mode, time) = instr {
+            let cycles = instruction_func::brk(&mut cpu, &mut mem, mode, *time);
+            assert_eq!(cycles, 7);
+            assert_eq!(cpu.p.b, true);
+            assert_eq!(cpu.pc, 0x5612);
+            assert_eq!(mem.read(0x01FF), 0x35);
+            assert_eq!(mem.read(0x01FE), 0x12);
+            assert_eq!(mem.read(0x01FD), 0x80);
+        } else {
+            panic!("Wrong instruction, got {:?}", instr);
+        }
+        
+        
     }
 
     #[test]
