@@ -128,6 +128,14 @@ impl CPU {
             Instruction::ADC(mode, time) => instruction_func::adc(self, memory, mode, *time),
             Instruction::AND(mode, time) => instruction_func::and(self, memory, mode, *time),
             Instruction::ASL(mode, time) => instruction_func::asl(self, memory, mode, *time),
+            Instruction::BCC(mode, time) => instruction_func::bcc(self, memory, mode, *time),
+            Instruction::BCS(mode, time) => instruction_func::bcs(self, memory, mode, *time),
+            Instruction::BEQ(mode, time) => instruction_func::beq(self, memory, mode, *time),
+            Instruction::BNE(mode, time) => instruction_func::bne(self, memory, mode, *time),
+            Instruction::BMI(mode, time) => instruction_func::bmi(self, memory, mode, *time),
+            Instruction::BPL(mode, time) => instruction_func::bpl(self, memory, mode, *time),
+            Instruction::BVC(mode, time) => instruction_func::bvc(self, memory, mode, *time),
+            Instruction::BVS(mode, time) => instruction_func::bvs(self, memory, mode, *time),
             Instruction::BIT(mode, time) => instruction_func::bit(self, memory, mode, *time),
             Instruction::BRK(mode, time) => instruction_func::brk(self, memory, mode, *time),
             Instruction::CLC(mode, time) => instruction_func::clc(self, memory, mode, *time),
@@ -173,7 +181,6 @@ impl CPU {
             Instruction::TXA(mode, time) => instruction_func::txa(self, memory, mode, *time),
             Instruction::TXS(mode, time) => instruction_func::txs(self, memory, mode, *time),
             Instruction::TYA(mode, time) => instruction_func::tya(self, memory, mode, *time),
-            _ => panic!("{:?} has not been implemented!")
         };
 
         // loop the number of cycles it took to complete the instruction
