@@ -940,24 +940,58 @@ pub mod instruction_func {
             AddressingMode::Accumulator | AddressingMode::ZeroPage | AddressingMode::ZeroPageX
             | AddressingMode::Absolute | AddressingMode::AbsoluteX =>
                 get_operand_using_addr_mode(mode, cpu, memory),
-            _ => panic!("Unsupported addressing mode {:?} for ASL", *mode),
+            _ => panic!("Unsupported addressing mode {:?} for ROL", *mode),
         };
 
         let (old_val, new_val) = {
             if *mode == AddressingMode::Accumulator {
                 let old = cpu.a;
                 cpu.a = cpu.a << 1;
+                cpu.a = cpu.a | (cpu.p.c as u8);
                 (old, cpu.a)
             } else {
                 let mut op = memory.read(operand);
                 let old = op;
                 op = op << 1;
+                op = op | (cpu.p.c as u8);
                 memory.write(operand, op);
                 (old, op)
             }
         };
 
         cpu.p.c = ((old_val & 0x80) >> 7) != 0; // set to contents of old bit 7
+        cpu.p.z = new_val == 0;
+        cpu.p.n = CPU::check_if_neg(new_val);
+
+        time
+    }
+
+    pub fn ror(cpu: &mut CPU, memory: &mut Memory, mode: &AddressingMode, time: usize) -> usize {
+        
+        let (operand, _) = match *mode {
+            AddressingMode::Accumulator | AddressingMode::ZeroPage | AddressingMode::ZeroPageX
+            | AddressingMode::Absolute | AddressingMode::AbsoluteX =>
+                get_operand_using_addr_mode(mode, cpu, memory),
+            _ => panic!("Unsupported addressing mode {:?} for ROR", *mode),
+        };
+
+        let (old_val, new_val) = {
+            if *mode == AddressingMode::Accumulator {
+                let old = cpu.a;
+                cpu.a = cpu.a >> 1;
+                cpu.a = cpu.a | ((cpu.p.c as u8) << 7);
+                (old, cpu.a)
+            } else {
+                let mut op = memory.read(operand);
+                let old = op;
+                op = op >> 1;
+                op = op | ((cpu.p.c as u8) << 7);
+                memory.write(operand, op);
+                (old, op)
+            }
+        };
+
+        cpu.p.c = old_val & 0x01 != 0; // set to contents of old bit 0
         cpu.p.z = new_val == 0;
         cpu.p.n = CPU::check_if_neg(new_val);
 
@@ -2625,6 +2659,174 @@ mod tests {
             assert_eq!(cycles, 2);
             assert_eq!(cpu.p.z, false);
             assert_eq!(cpu.p.n, true);
+        } else {
+            panic!("Wrong instruction, got {:?}", instr);
+        }
+    }
+
+    #[test]
+    fn rol_acc_test() {
+        let (mut cpu, mut mem) = generate_cpu_and_mem();
+        mem.write(0, 0x2A);
+        cpu.a = 0x01;
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        if let Instruction::ROL(mode, time) = instr {
+            let cycles = instruction_func::rol(&mut cpu, &mut mem, mode, *time);
+            assert_eq!(cpu.a, 0x02);
+            assert_eq!(cycles, 2);
+            assert_eq!(cpu.p.c, false);
+            assert_eq!(cpu.p.z, false);
+            assert_eq!(cpu.p.n, false);
+        } else {
+            panic!("Wrong instruction, got {:?}", instr);
+        }
+    }
+
+    #[test]
+    fn rol_acc_carry_and_zero_test() {
+        let (mut cpu, mut mem) = generate_cpu_and_mem();
+        mem.write(0, 0x2A);
+        cpu.a = 0x80;
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        if let Instruction::ROL(mode, time) = instr {
+            let cycles = instruction_func::rol(&mut cpu, &mut mem, mode, *time);
+            assert_eq!(cpu.a, 0x00);
+            assert_eq!(cycles, 2);
+            assert_eq!(cpu.p.c, true);
+            assert_eq!(cpu.p.z, true);
+            assert_eq!(cpu.p.n, false);
+        } else {
+            panic!("Wrong instruction, got {:?}", instr);
+        }
+    }
+
+    #[test]
+    fn rol_acc_neg_test() {
+        let (mut cpu, mut mem) = generate_cpu_and_mem();
+        mem.write(0, 0x2A);
+        cpu.a = 0x40;
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        if let Instruction::ROL(mode, time) = instr {
+            let cycles = instruction_func::rol(&mut cpu, &mut mem, mode, *time);
+            assert_eq!(cpu.a, 0x80);
+            assert_eq!(cycles, 2);
+            assert_eq!(cpu.p.c, false);
+            assert_eq!(cpu.p.z, false);
+            assert_eq!(cpu.p.n, true);
+        } else {
+            panic!("Wrong instruction, got {:?}", instr);
+        }
+    }
+
+    #[test]
+    fn rol_acc_with_carry_test() {
+        let (mut cpu, mut mem) = generate_cpu_and_mem();
+        mem.write(0, 0x2A);
+        cpu.p.c = true;
+        cpu.a = 0x01;
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        if let Instruction::ROL(mode, time) = instr {
+            let cycles = instruction_func::rol(&mut cpu, &mut mem, mode, *time);
+            assert_eq!(cpu.a, 0x03);
+            assert_eq!(cycles, 2);
+            assert_eq!(cpu.p.c, false);
+            assert_eq!(cpu.p.z, false);
+            assert_eq!(cpu.p.n, false);
+        } else {
+            panic!("Wrong instruction, got {:?}", instr);
+        }
+    }
+
+    #[test]
+    fn rol_abs_test() {
+        let (mut cpu, mut mem) = generate_cpu_and_mem();
+        mem.write(0, 0x2E);
+        mem.write(1, 0x40);
+        mem.write(2, 0x01);
+        mem.write(0x0140, 0x01);
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        if let Instruction::ROL(mode, time) = instr {
+            let cycles = instruction_func::rol(&mut cpu, &mut mem, mode, *time);
+            assert_eq!(mem.read(0x0140), 0x02);
+            assert_eq!(cycles, 6);
+            assert_eq!(cpu.p.c, false);
+            assert_eq!(cpu.p.z, false);
+            assert_eq!(cpu.p.n, false);
+        } else {
+            panic!("Wrong instruction, got {:?}", instr);
+        }
+    }
+
+    #[test]
+    fn ror_acc_test() {
+        let (mut cpu, mut mem) = generate_cpu_and_mem();
+        mem.write(0, 0x6A);
+        cpu.a = 0x02;
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        if let Instruction::ROR(mode, time) = instr {
+            let cycles = instruction_func::ror(&mut cpu, &mut mem, mode, *time);
+            assert_eq!(cpu.a, 0x01);
+            assert_eq!(cycles, 2);
+            assert_eq!(cpu.p.c, false);
+            assert_eq!(cpu.p.z, false);
+            assert_eq!(cpu.p.n, false);
+        } else {
+            panic!("Wrong instruction, got {:?}", instr);
+        }
+    }
+
+    #[test]
+    fn ror_acc_with_carry_test() {
+        let (mut cpu, mut mem) = generate_cpu_and_mem();
+        mem.write(0, 0x6A);
+        cpu.a = 0x02;
+        cpu.p.c = true;
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        if let Instruction::ROR(mode, time) = instr {
+            let cycles = instruction_func::ror(&mut cpu, &mut mem, mode, *time);
+            assert_eq!(cpu.a, 0x81);
+            assert_eq!(cycles, 2);
+            assert_eq!(cpu.p.c, false);
+            assert_eq!(cpu.p.z, false);
+            assert_eq!(cpu.p.n, true);
+        } else {
+            panic!("Wrong instruction, got {:?}", instr);
+        }
+    }
+
+    #[test]
+    fn ror_acc_carry_and_zero_test() {
+        let (mut cpu, mut mem) = generate_cpu_and_mem();
+        mem.write(0, 0x6A);
+        cpu.a = 0x01;
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        if let Instruction::ROR(mode, time) = instr {
+            let cycles = instruction_func::ror(&mut cpu, &mut mem, mode, *time);
+            assert_eq!(cpu.a, 0x00);
+            assert_eq!(cycles, 2);
+            assert_eq!(cpu.p.c, true);
+            assert_eq!(cpu.p.z, true);
+            assert_eq!(cpu.p.n, false);
+        } else {
+            panic!("Wrong instruction, got {:?}", instr);
+        }
+    }
+
+    #[test]
+    fn ror_abs_test() {
+        let (mut cpu, mut mem) = generate_cpu_and_mem();
+        mem.write(0, 0x6E);
+        mem.write(1, 0x40);
+        mem.write(2, 0x01);
+        mem.write(0x0140, 0x02);
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        if let Instruction::ROR(mode, time) = instr {
+            let cycles = instruction_func::ror(&mut cpu, &mut mem, mode, *time);
+            assert_eq!(mem.read(0x0140), 0x01);
+            assert_eq!(cycles, 6);
+            assert_eq!(cpu.p.c, false);
+            assert_eq!(cpu.p.z, false);
+            assert_eq!(cpu.p.n, false);
         } else {
             panic!("Wrong instruction, got {:?}", instr);
         }
