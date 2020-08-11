@@ -23,7 +23,7 @@ fn main() {
     }
 
     let rom_path = Path::new(&args[1]);
-    let mut file = File::create(rom_path).unwrap();
+    let mut file = File::open(rom_path).unwrap();
 
     let mut buf: [u8; BUFFER_SIZE+16] = [0; BUFFER_SIZE+16];
 
