@@ -4,10 +4,21 @@ extern crate lazy_static;
 extern crate log;
 
 mod cpu;
+mod mapper;
 mod memory;
 mod instruction;
 mod system;
 
+use std::env;
+
 fn main() {
-    println!("Hello, world!");
+    let args: Vec<String> = env::args().collect();
+
+    if args.len() != 2 {
+        println!("Please supply a ROM path");
+        return;
+    }
+
+    let mut system = system::NesSystem::load_rom(&args[1]).unwrap();
+    system.run();
 }
