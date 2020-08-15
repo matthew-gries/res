@@ -18,14 +18,15 @@ impl StatusRegister {
 
     pub fn new() -> Self {
         StatusRegister{
-                n: false,
-                v: false,
-                b: false,
-                d: false,
-                i: false,
-                z: false,
-                c: false}
-    }
+            n: false,
+            v: false,
+            b: false,
+            d: false,
+            i: false,
+            z: false,
+            c: false
+        }
+}
 
     pub fn as_u8(&self) -> u8 {
         let mut num: u8 = 0;
@@ -68,12 +69,11 @@ impl CPU {
 
     /// Create a new CPU with all fields zeroed
     pub fn new() -> Self {
-        CPU{a: 0, x:0, y: 0, sp: 0, pc: 0, p: StatusRegister::new()}
+        CPU{a: 0, x:0, y: 0, sp: 0xFF, pc: 0, p: StatusRegister::new()}
     }
 
-    /// Setup the CPU for use in the NES system (including setting the stack pointer)
-    pub fn init(&mut self) -> &Self {
-        self.sp = 0xFF;
+    /// Perform a reset interrupt request
+    pub fn reset(&mut self) -> &Self {
         self
     }
 
@@ -114,6 +114,7 @@ impl CPU {
 
     /// Perform one fetch-decode-execute cycle
     pub fn instruction_cycle(&mut self, memory: &mut Memory) -> Result<(), String> {
+        println!("{:x}", self.pc);
         let opcode = self.read_byte_and_increment(memory);
         let instr = INSTRUCTION_TABLE.get(&opcode);
 
