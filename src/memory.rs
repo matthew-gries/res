@@ -66,13 +66,16 @@ impl Memory {
         self.data[adjusted_addr as usize]
     }
 
-    pub fn write(&mut self, addr: u16, byte: u8) {
+    pub fn write(&mut self, addr: u16, byte: u8) -> Result<(), &'static str> {
 
 	let mem_map_segment = Self::get_mem_map_segment(addr);
 	let adjusted_addr = match mem_map_segment {
-	    MemoryMapSegments::ExpansionRom | MemoryMapSegments::PRGROM => panic!("Attempted to write to Read Only memory!"),
+	    MemoryMapSegments::ExpansionRom | MemoryMapSegments::PRGROM => {
+		return Err("Attempted to write to Read Only memory!");
+	    }
 	    _ => Self::get_address(addr, mem_map_segment)
 	};
-        self.data[adjusted_addr as usize] = byte
+        self.data[adjusted_addr as usize] = byte;
+	Ok(())
     }
 }

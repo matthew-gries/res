@@ -80,7 +80,7 @@ impl CPU {
     /// Push a value onto the stack
     pub fn push_stack(&mut self, memory: &mut Memory, val: u8) -> &Self {
         let stack_addr = STACK_MEMORY_PAGE + self.sp as u16;
-        memory.write(stack_addr, val);
+        memory.write(stack_addr, val).unwrap();
         let (new_stack_addr, underflowed) = self.sp.overflowing_sub(1);
         self.sp = new_stack_addr;
         if underflowed {
