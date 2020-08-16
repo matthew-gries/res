@@ -5,7 +5,7 @@ pub struct Memory {
     data: [u8; MEMORY_MAP_ADDRESSABLE_RANGE]
 }
 
-enum MemoryMapSegments {
+pub enum MemoryMapSegments {
     RAM(u16),
     IORegisters(Option<u16>),
     ExpansionRom,
@@ -26,7 +26,7 @@ impl Memory {
         addr1_high != addr2_high
     }
 
-    fn get_mem_map_segment(addr: u16) -> MemoryMapSegments {
+    pub fn get_mem_map_segment(addr: u16) -> MemoryMapSegments {
 	if addr < 0x2000 {
 	    MemoryMapSegments::RAM(0x0800)
 	} else if addr < 0x4000 {
@@ -42,7 +42,7 @@ impl Memory {
 	}
     }
 
-    fn get_address(addr: u16, segment: MemoryMapSegments) -> u16 {
+    pub fn get_address(addr: u16, segment: MemoryMapSegments) -> u16 {
 	
 	match segment {
 	    MemoryMapSegments::RAM(mask) => addr % mask,
@@ -69,12 +69,7 @@ impl Memory {
     pub fn write(&mut self, addr: u16, byte: u8) -> Result<(), &'static str> {
 
 	let mem_map_segment = Self::get_mem_map_segment(addr);
-	let adjusted_addr = match mem_map_segment {
-	    MemoryMapSegments::ExpansionRom | MemoryMapSegments::PRGROM => {
-		return Err("Attempted to write to Read Only memory!");
-	    }
-	    _ => Self::get_address(addr, mem_map_segment)
-	};
+	let adjusted_addr = Self::get_address(addr, mem_map_segment);
         self.data[adjusted_addr as usize] = byte;
 	Ok(())
     }

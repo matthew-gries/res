@@ -83,8 +83,8 @@ pub fn get_operand_using_addr_mode(mode: &AddressingMode, cpu: &mut CPU, memory:
             }
             let addr_ind = ((high_byte_ind as u16) << 8) | low_byte_ind as u16;
 
-            let low_byte = memory.read(addr_ind);
-            let high_byte = memory.read(addr_ind.overflowing_add(1).0);
+            let low_byte = CPU::mem_read(memory, addr_ind);
+            let high_byte = CPU::mem_read(memory, addr_ind.overflowing_add(1).0);
             let addr = ((high_byte as u16) << 8) | low_byte as u16;
             (addr, 0)
         },
@@ -96,16 +96,16 @@ pub fn get_operand_using_addr_mode(mode: &AddressingMode, cpu: &mut CPU, memory:
             let addr = cpu.read_byte_and_increment(memory);
             let (low_byte_addr, _) = addr.overflowing_add(cpu.x);
             let (high_byte_addr, _) = low_byte_addr.overflowing_add(1);
-            let low_byte = memory.read(low_byte_addr as u16);
-            let high_byte = memory.read(high_byte_addr as u16);
+            let low_byte = CPU::mem_read(memory, low_byte_addr as u16);
+            let high_byte = CPU::mem_read(memory, high_byte_addr as u16);
             let addr = ((high_byte as u16) << 8) | low_byte as u16;
             (addr, 0)
         },
         AddressingMode::IndirectIndexed => {
             let low_byte_addr = cpu.read_byte_and_increment(memory);
             let (high_byte_addr, _) = low_byte_addr.overflowing_add(1);
-            let low_byte = memory.read(low_byte_addr as u16);
-            let high_byte = memory.read(high_byte_addr as u16);
+            let low_byte = CPU::mem_read(memory, low_byte_addr as u16);
+            let high_byte = CPU::mem_read(memory, high_byte_addr as u16);
             let addr_old = ((high_byte as u16) << 8) | low_byte as u16;
             let (addr, _) = addr_old.overflowing_add(cpu.y as u16);
             let cycles = {
@@ -392,7 +392,7 @@ pub mod instruction_func {
             if let AddressingMode::Immediate = *mode {
                 operand as u8
             } else {
-                memory.read(operand)
+                CPU::mem_read(memory, operand)
             }
         };
 
@@ -429,7 +429,7 @@ pub mod instruction_func {
             if let AddressingMode::Immediate = *mode {
                 operand as u8
             } else {
-                memory.read(operand)
+                CPU::mem_read(memory, operand)
             }
         };
 
@@ -457,10 +457,10 @@ pub mod instruction_func {
                 cpu.a = cpu.a << 1;
                 (old, cpu.a)
             } else {
-                let mut op = memory.read(operand);
+                let mut op = CPU::mem_read(memory, operand);
                 let old = op;
                 op = op << 1;
-                memory.write(operand, op).unwrap();
+                CPU::mem_write(memory, operand, op).unwrap();
                 (old, op)
             }
         };
@@ -696,7 +696,7 @@ pub mod instruction_func {
             _ => panic!("Unsupported addressing mode {:?} for BIT", *mode),
         };
 
-        let result = memory.read(operand);
+        let result = CPU::mem_read(memory, operand);
 
         cpu.p.z = (result & cpu.a) == 0;
         cpu.p.n = (result & 0x80 >> 7) != 0;
@@ -720,7 +720,7 @@ pub mod instruction_func {
         cpu.push_stack(memory, pc_high_byte);
         cpu.push_stack(memory, flags);
 
-        let irq_vector = ((memory.read(0xFFFE) as u16) << 8) | memory.read(0xFFFF) as u16;
+        let irq_vector = ((CPU::mem_read(memory, 0xFFFE) as u16) << 8) | 0xFFFF) as u16;
 
         cpu.pc = irq_vector;
 
@@ -790,7 +790,7 @@ pub mod instruction_func {
             if let AddressingMode::Immediate = *mode {
                 operand as u8
             } else {
-                memory.read(operand)
+                CPU::mem_read(memory, operand)
             }
         };
 
@@ -813,7 +813,7 @@ pub mod instruction_func {
             if let AddressingMode::Immediate = *mode {
                 operand as u8
             } else {
-                memory.read(operand)
+                CPU::mem_read(memory, operand)
             }
         };
 
@@ -835,7 +835,7 @@ pub mod instruction_func {
             if let AddressingMode::Immediate = *mode {
                 operand as u8
             } else {
-                memory.read(operand)
+                CPU::mem_read(memory, operand)
             }
         };
 
@@ -855,9 +855,9 @@ pub mod instruction_func {
             _ => panic!("Unsupported addressing mode {:?} for DEC", *mode),
         };
 
-        let result = memory.read(operand);
+        let result = CPU::mem_read(memory, operand);
         let (result, _) = result.overflowing_sub(1);
-        memory.write(operand, result).unwrap();
+        CPU::mem_write(memory, operand, result).unwrap();
 
         cpu.p.n = CPU::check_if_neg(result);
         cpu.p.z = result == 0;
@@ -911,7 +911,7 @@ pub mod instruction_func {
             if let AddressingMode::Immediate = *mode {
                 operand as u8
             } else {
-                memory.read(operand)
+                CPU::mem_read(memory, operand)
             }
         };
 
@@ -933,9 +933,9 @@ pub mod instruction_func {
             _ => panic!("Unsupported addressing mode {:?} for INC", *mode),
         };
 
-        let result = memory.read(operand);
+        let result = CPU::mem_read(memory, operand);
         let (result, _) = result.overflowing_add(1);
-        memory.write(operand, result).unwrap();
+        CPU::mem_write(memory, operand, result).unwrap();
 
         cpu.p.n = CPU::check_if_neg(result);
         cpu.p.z = result == 0;
@@ -1021,7 +1021,7 @@ pub mod instruction_func {
             if let AddressingMode::Immediate = *mode {
                 operand as u8
             } else {
-                memory.read(operand)
+                CPU::mem_read(memory, operand)
             }
         };
 
@@ -1047,7 +1047,7 @@ pub mod instruction_func {
             if let AddressingMode::Immediate = *mode {
                 operand as u8
             } else {
-                memory.read(operand)
+                CPU::mem_read(memory, operand)
             }
         };
 
@@ -1073,7 +1073,7 @@ pub mod instruction_func {
             if let AddressingMode::Immediate = *mode {
                 operand as u8
             } else {
-                memory.read(operand)
+                CPU::mem_read(memory, operand)
             }
         };
 
@@ -1101,10 +1101,10 @@ pub mod instruction_func {
                 cpu.a = cpu.a >> 1;
                 (old, cpu.a)
             } else {
-                let mut op = memory.read(operand);
+                let mut op = CPU::mem_read(memory, operand);
                 let old = op;
                 op = op >> 1;
-                memory.write(operand, op).unwrap();
+                CPU::mem_write(memory, operand, op).unwrap();
                 (old, op)
             }
         };
@@ -1140,7 +1140,7 @@ pub mod instruction_func {
             if let AddressingMode::Immediate = *mode {
                 operand as u8
             } else {
-                memory.read(operand)
+                CPU::mem_read(memory, operand)
             }
         };
 
@@ -1226,11 +1226,11 @@ pub mod instruction_func {
                 cpu.a = cpu.a | (cpu.p.c as u8);
                 (old, cpu.a)
             } else {
-                let mut op = memory.read(operand);
+                let mut op = CPU::mem_read(memory, operand);
                 let old = op;
                 op = op << 1;
                 op = op | (cpu.p.c as u8);
-                memory.write(operand, op).unwrap();
+                CPU::mem_write(memory, operand, op).unwrap();
                 (old, op)
             }
         };
@@ -1258,11 +1258,11 @@ pub mod instruction_func {
                 cpu.a = cpu.a | ((cpu.p.c as u8) << 7);
                 (old, cpu.a)
             } else {
-                let mut op = memory.read(operand);
+                let mut op = CPU::mem_read(memory, operand);
                 let old = op;
                 op = op >> 1;
                 op = op | ((cpu.p.c as u8) << 7);
-                memory.write(operand, op).unwrap();
+                CPU::mem_write(memory, operand, op).unwrap();
                 (old, op)
             }
         };
@@ -1359,7 +1359,7 @@ pub mod instruction_func {
             _ => panic!("Unsupported addressing mode {:?} for STA", *mode)
         };
 
-        memory.write(operand, cpu.a).unwrap();
+        CPU::mem_write(memory, operand, cpu.a).unwrap();
 
         let cycles = time + extra_cycles;
         cycles
@@ -1373,7 +1373,7 @@ pub mod instruction_func {
             _ => panic!("Unsupported addressing mode {:?} for STX", *mode)
         };
 
-        memory.write(operand, cpu.x).unwrap();
+        CPU::mem_write(memory, operand, cpu.x).unwrap();
 
         let cycles = time + extra_cycles;
         cycles
@@ -1387,7 +1387,7 @@ pub mod instruction_func {
             _ => panic!("Unsupported addressing mode {:?} for STY", *mode)
         };
 
-        memory.write(operand, cpu.y).unwrap();
+        CPU::mem_write(memory, operand, cpu.y).unwrap();
 
         let cycles = time + extra_cycles;
         cycles
@@ -1407,7 +1407,7 @@ pub mod instruction_func {
             if let AddressingMode::Immediate = *mode {
                 operand as u8
             } else {
-                memory.read(operand)
+                CPU::mem_read(memory, operand)
             }
         };
 

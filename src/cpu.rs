@@ -2,6 +2,7 @@ use crate::instruction::Instruction;
 use crate::instruction::instruction_func;
 use crate::instruction::INSTRUCTION_TABLE;
 use crate::memory::Memory;
+use crate::memory::MemoryMapSegments;
 
 /// Structure for handling the status register
 pub struct StatusRegister {
@@ -192,4 +193,18 @@ impl CPU {
         Ok(())
     }
 
+    pub fn mem_write(memory: &mut Memory, addr: u16, byte: u8) -> Result<(), &'static str> {
+	
+	match Memory::get_mem_map_segment(addr) {
+	    MemoryMapSegments::ExpansionRom | MemoryMapSegments::PRGROM => {
+		Err("CPU attempted to write to read only memory!")
+	    }
+	    _ => memory.write(addr, byte)
+	}
+    }
+
+    pub fn mem_read(memory: &Memory, addr: u16) -> u8 {
+
+	memory.read(addr)
+    }
 }
