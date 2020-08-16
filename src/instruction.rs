@@ -720,7 +720,7 @@ pub mod instruction_func {
         cpu.push_stack(memory, pc_high_byte);
         cpu.push_stack(memory, flags);
 
-        let irq_vector = ((CPU::mem_read(memory, 0xFFFE) as u16) << 8) | 0xFFFF) as u16;
+        let irq_vector = (((CPU::mem_read(memory, 0xFFFE) as u16) << 8) | CPU::mem_read(memory, 0xFFFF) as u16) as u16;
 
         cpu.pc = irq_vector;
 
@@ -3135,7 +3135,7 @@ mod tests {
     #[test]
     fn ldx_zp_test() {
         let (mut cpu, mut mem) = generate_cpu_and_mem();
-        mem.write(0x0040, 0x44);  // M[0x0040] <- 0x4.unwrap();
+        mem.write(0x0040, 0x44).unwrap();  // M[0x0040] <- 0x4
         mem.write(0, 0xA6).unwrap();
         mem.write(1, 0x40).unwrap();
         let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
@@ -3153,7 +3153,7 @@ mod tests {
     #[test]
     fn ldx_zpy_test() {
         let (mut cpu, mut mem) = generate_cpu_and_mem();
-        mem.write(0x0040, 0x44);  // M[0x0040] <- 0x4.unwrap();
+        mem.write(0x0040, 0x44).unwrap();  // M[0x0040] <- 0x4
         mem.write(0, 0xB6).unwrap();
         mem.write(1, 0x3F).unwrap();
         cpu.y = 1;
@@ -3248,7 +3248,7 @@ mod tests {
     #[test]
     fn ldy_zp_test() {
         let (mut cpu, mut mem) = generate_cpu_and_mem();
-        mem.write(0x0040, 0x44);  // M[0x0040] <- 0x4.unwrap();
+        mem.write(0x0040, 0x44).unwrap();  // M[0x0040] <- 0x4
         mem.write(0, 0xA4).unwrap();
         mem.write(1, 0x40).unwrap();
         let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
@@ -3266,7 +3266,7 @@ mod tests {
     #[test]
     fn ldy_zpx_test() {
         let (mut cpu, mut mem) = generate_cpu_and_mem();
-        mem.write(0x0040, 0x44);  // M[0x0040] <- 0x4.unwrap();
+        mem.write(0x0040, 0x44).unwrap();  // M[0x0040] <- 0x4.unwrap();
         mem.write(0, 0xB4).unwrap();
         mem.write(1, 0x3F).unwrap();
         cpu.x = 1;
@@ -3361,8 +3361,8 @@ mod tests {
     #[test]
     fn lda_zp_test() {
         let (mut cpu, mut mem) = generate_cpu_and_mem();
-        mem.write(0x0040, 0x44);  // M[0x0040] <- 0x4.unwrap();
-        mem.write(0, 0xA5); // LDA $4.unwrap();
+        mem.write(0x0040, 0x44).unwrap();  // M[0x0040] <- 0x4
+        mem.write(0, 0xA5).unwrap(); // LDA 
         mem.write(1, 0x40).unwrap();
         let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
         if let Instruction::LDA(mode, time) = instr {
@@ -3379,7 +3379,7 @@ mod tests {
     #[test]
     fn lda_zpx_test() {
         let (mut cpu, mut mem) = generate_cpu_and_mem();
-        mem.write(0x0040, 0x44);  // M[0x0040] <- 0x4.unwrap();
+        mem.write(0x0040, 0x44).unwrap();  // M[0x0040] <- 0x4
         mem.write(0, 0xB5).unwrap();
         mem.write(1, 0x3F).unwrap();
         cpu.x = 1;
@@ -4035,9 +4035,9 @@ mod tests {
     #[test]
     fn sta_zp_test() {
         let (mut cpu, mut mem) = generate_cpu_and_mem();
-        mem.write(0, 0xA9); // LDA #$4.unwrap();
+        mem.write(0, 0xA9).unwrap(); // LDA #$4
         mem.write(1, 0x44).unwrap();
-        mem.write(2, 0x85); // STA $4.unwrap();
+        mem.write(2, 0x85).unwrap(); // STA $4
         mem.write(3, 0x40).unwrap();
         cpu.instruction_cycle(&mut mem).unwrap(); // execte the LDA instruction
         let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
@@ -4054,7 +4054,7 @@ mod tests {
     #[test]
     fn stx_zp_test() {
         let (mut cpu, mut mem) = generate_cpu_and_mem();
-        mem.write(0, 0x86); // STX $4.unwrap();
+        mem.write(0, 0x86).unwrap(); // STX $4
         mem.write(1, 0x40).unwrap();
         cpu.x = 0x44;
         let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
@@ -4068,7 +4068,7 @@ mod tests {
     #[test]
     fn sty_zp_test() {
         let (mut cpu, mut mem) = generate_cpu_and_mem();
-        mem.write(0, 0x84); // STY $4.unwrap();
+        mem.write(0, 0x84).unwrap(); // STY $4
         mem.write(1, 0x40).unwrap();
         cpu.y = 0x44;
         let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
