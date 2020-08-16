@@ -15,8 +15,8 @@ pub enum MemoryMapSegments {
 
 impl Memory {
 
-    pub fn from_data_buffer(data: [u8; MEMORY_MAP_ADDRESSABLE_RANGE]) -> Self {
-        Memory{data}
+    pub fn new() -> Self {
+        Memory{data: [0; MEMORY_MAP_ADDRESSABLE_RANGE]}
     }
 
     pub fn check_if_page_crossed(addr1: u16, addr2: u16) -> bool {

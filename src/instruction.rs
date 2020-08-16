@@ -1524,7 +1524,7 @@ mod tests {
     use super::*;
 
     fn generate_cpu_and_mem() -> (CPU, Memory) {
-        (CPU::new(), Memory::from_data_buffer([0; 0x10000]))
+        (CPU::new(), Memory::new())
     }
 
     #[test]

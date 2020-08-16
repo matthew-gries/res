@@ -17,8 +17,8 @@ pub struct NesSystem {
 }
 
 enum FileHeader {
-    I_NES([u8; HEADER_SIZE]),
-    NES_2_0([u8; HEADER_SIZE]),
+    INes([u8; HEADER_SIZE]),
+    Nes2_0([u8; HEADER_SIZE]),
 }
 
 struct CommonINESInfo {
@@ -60,17 +60,16 @@ impl NesSystem {
             Err(err) => {return Err(NesSystemError::SystemIOError(err))},
         };
         
-        let mut mem_map: [u8; MEMORY_MAP_ADDRESSABLE_RANGE] = [0; MEMORY_MAP_ADDRESSABLE_RANGE];
+        let mut memory = Memory::new();
 
         let file_format = Self::find_file_header(&mut rom)?;
 
         match file_format {
-            FileHeader::I_NES(header) => Self::i_nes_handler(&mut rom, &header, &mut mem_map)?,
-            FileHeader::NES_2_0(header) => Self::nes_2_0_handler(&mut rom, &header, &mut mem_map)?
+            FileHeader::INes(header) => Self::i_nes_handler(&mut rom, &header, &mut memory)?,
+            FileHeader::Nes2_0(header) => Self::nes_2_0_handler(&mut rom, &header, &mut memory)?
         }
 
         let cpu = CPU::new();
-        let memory = Memory::from_data_buffer(mem_map);
         Ok(NesSystem{cpu, memory})
     }
 }
@@ -105,9 +104,9 @@ impl NesSystem {
         if Self::check_ines_format_name(&header_buf) {
             // check for NES 2.0 format
             if Self::check_nes_2_0_format(&header_buf) { 
-                Ok(FileHeader::NES_2_0(header_buf))
+                Ok(FileHeader::Nes2_0(header_buf))
             } else {
-                Ok(FileHeader::I_NES(header_buf))
+                Ok(FileHeader::INes(header_buf))
             }
         } else {
             Err(NesSystemError::UnknownFileFormat)
@@ -144,7 +143,7 @@ impl NesSystem {
         INESInfo{nes_info, prg_ram_size, tv_system, prg_ram, bus_conflicts}
     }
 
-    fn i_nes_handler(rom: &mut File, header: &[u8; HEADER_SIZE], mem_buf: &mut [u8; MEMORY_MAP_ADDRESSABLE_RANGE]) -> Result<(), NesSystemError> {
+    fn i_nes_handler(rom: &mut File, header: &[u8; HEADER_SIZE], memory: &mut Memory) -> Result<(), NesSystemError> {
 
         // get the size of the PRG ROM
         let prg_rom_bytes: usize = header[4] as usize;
@@ -180,13 +179,15 @@ impl NesSystem {
         Self::read_from_rom(rom, &mut prg_rom[..])?;
         
         for i in 0..(prg_end-prg_start) {
-            mem_buf[prg_start+i] = prg_rom[i];
+            if let Err(err) = memory.write((prg_start+i) as u16, prg_rom[i]) {
+		return Err(NesSystemError::MemoryIOError(err));
+	    }
         }
 
         Ok(())
     }
 
-    fn nes_2_0_handler(rom: &mut File, header: &[u8; HEADER_SIZE], mem_buf: &mut [u8; MEMORY_MAP_ADDRESSABLE_RANGE]) -> Result<(), NesSystemError> {
+    fn nes_2_0_handler(rom: &mut File, header: &[u8; HEADER_SIZE], memory: &mut Memory) -> Result<(), NesSystemError> {
         
         Ok(())
     }
@@ -203,6 +204,7 @@ mod nes_system_error {
         SystemIOError(std::io::Error),
         UnknownFileFormat,
         UnknownMapper(u8),
+	MemoryIOError(&'static str)
     }
 
     impl fmt::Display for NesSystemError {
@@ -214,7 +216,8 @@ mod nes_system_error {
                 },
                 NesSystemError::UnknownMapper(mapper) => {
                     write!(f, "Mapper {} is unknown or unsupported.", mapper)
-                }
+                },
+		NesSystemError::MemoryIOError(err) => write!(f, "{}", err)
             }
         }
     }
