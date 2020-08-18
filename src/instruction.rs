@@ -1,4 +1,5 @@
 use crate::cpu::CPU;
+use crate::main_memory::MainMemory;
 use crate::memory::Memory;
 
 use std::collections::HashMap;
@@ -21,7 +22,7 @@ pub enum AddressingMode {
 }
 
 /// Get the operand given the addressing mode, as well as the number of extra cycles if necessary
-pub fn get_operand_using_addr_mode(mode: &AddressingMode, cpu: &mut CPU, memory: &Memory) -> (u16, usize) {
+pub fn get_operand_using_addr_mode(mode: &AddressingMode, cpu: &mut CPU, memory: &MainMemory) -> (u16, usize) {
 
     match *mode {
         AddressingMode::Immediate => {
@@ -53,7 +54,7 @@ pub fn get_operand_using_addr_mode(mode: &AddressingMode, cpu: &mut CPU, memory:
             let addr_old = ((high_byte as u16) << 8) | low_byte as u16;
             let (addr, _) = addr_old.overflowing_add(cpu.x as u16);
             let cycles = {
-                if Memory::check_if_page_crossed(addr_old, addr) {
+                if MainMemory::check_if_page_crossed(addr_old, addr) {
                     1
                 } else {
                     0
@@ -67,7 +68,7 @@ pub fn get_operand_using_addr_mode(mode: &AddressingMode, cpu: &mut CPU, memory:
             let addr_old = ((high_byte as u16) << 8) | low_byte as u16;
             let (addr, _) = addr_old.overflowing_add(cpu.y as u16);
             let cycles = {
-                if Memory::check_if_page_crossed(addr_old, addr) {
+                if MainMemory::check_if_page_crossed(addr_old, addr) {
                     1
                 } else {
                     0
@@ -109,7 +110,7 @@ pub fn get_operand_using_addr_mode(mode: &AddressingMode, cpu: &mut CPU, memory:
             let addr_old = ((high_byte as u16) << 8) | low_byte as u16;
             let (addr, _) = addr_old.overflowing_add(cpu.y as u16);
             let cycles = {
-                if Memory::check_if_page_crossed(addr_old, addr) {
+                if MainMemory::check_if_page_crossed(addr_old, addr) {
                     1
                 } else {
                     0
@@ -378,7 +379,7 @@ pub mod instruction_func {
     use super::*;
 
     /// Run an ADC instruction and return the number of cycles it took to complete the instruction
-    pub fn adc(cpu: &mut CPU, memory: &Memory, mode: &AddressingMode, time: usize) -> usize {
+    pub fn adc(cpu: &mut CPU, memory: &MainMemory, mode: &AddressingMode, time: usize) -> usize {
 
         let (operand, extra_cycles) = match *mode {
             AddressingMode::Immediate | AddressingMode::ZeroPage | AddressingMode::ZeroPageX
@@ -415,7 +416,7 @@ pub mod instruction_func {
         cycles
     }
 
-    pub fn and(cpu: &mut CPU, memory: &Memory, mode: &AddressingMode, time: usize) -> usize {
+    pub fn and(cpu: &mut CPU, memory: &MainMemory, mode: &AddressingMode, time: usize) -> usize {
         
         let (operand, extra_cycles) = match *mode {
             AddressingMode::Immediate | AddressingMode::ZeroPage | AddressingMode::ZeroPageX
@@ -442,7 +443,7 @@ pub mod instruction_func {
         cycles
     }
 
-    pub fn asl(cpu: &mut CPU, memory: &mut Memory, mode: &AddressingMode, time: usize) -> usize {
+    pub fn asl(cpu: &mut CPU, memory: &mut MainMemory, mode: &AddressingMode, time: usize) -> usize {
         
         let (operand, _) = match *mode {
             AddressingMode::Accumulator | AddressingMode::ZeroPage | AddressingMode::ZeroPageX
@@ -472,7 +473,7 @@ pub mod instruction_func {
         time
     }
 
-    pub fn bcc(cpu: &mut CPU, memory: &mut Memory, mode: &AddressingMode, time: usize) -> usize {
+    pub fn bcc(cpu: &mut CPU, memory: &mut MainMemory, mode: &AddressingMode, time: usize) -> usize {
         let (operand, _) = match *mode {
             AddressingMode::Relative =>
                 get_operand_using_addr_mode(mode, cpu, memory),
@@ -485,7 +486,7 @@ pub mod instruction_func {
             if !cpu.p.c {
                 let old_pc = cpu.pc;
                 cpu.pc = cpu.pc + operand;
-                if Memory::check_if_page_crossed(old_pc, cpu.pc) {
+                if MainMemory::check_if_page_crossed(old_pc, cpu.pc) {
                     2 
                 } else {
                     1
@@ -499,7 +500,7 @@ pub mod instruction_func {
         cycles
     }
 
-    pub fn bcs(cpu: &mut CPU, memory: &mut Memory, mode: &AddressingMode, time: usize) -> usize {
+    pub fn bcs(cpu: &mut CPU, memory: &mut MainMemory, mode: &AddressingMode, time: usize) -> usize {
         let (operand, _) = match *mode {
             AddressingMode::Relative =>
                 get_operand_using_addr_mode(mode, cpu, memory),
@@ -512,7 +513,7 @@ pub mod instruction_func {
             if cpu.p.c {
                 let old_pc = cpu.pc;
                 cpu.pc = cpu.pc + operand;
-                if Memory::check_if_page_crossed(old_pc, cpu.pc) {
+                if MainMemory::check_if_page_crossed(old_pc, cpu.pc) {
                     2 
                 } else {
                     1
@@ -526,7 +527,7 @@ pub mod instruction_func {
         cycles
     }
 
-    pub fn beq(cpu: &mut CPU, memory: &mut Memory, mode: &AddressingMode, time: usize) -> usize {
+    pub fn beq(cpu: &mut CPU, memory: &mut MainMemory, mode: &AddressingMode, time: usize) -> usize {
         let (operand, _) = match *mode {
             AddressingMode::Relative =>
                 get_operand_using_addr_mode(mode, cpu, memory),
@@ -539,7 +540,7 @@ pub mod instruction_func {
             if cpu.p.z {
                 let old_pc = cpu.pc;
                 cpu.pc = cpu.pc + operand;
-                if Memory::check_if_page_crossed(old_pc, cpu.pc) {
+                if MainMemory::check_if_page_crossed(old_pc, cpu.pc) {
                     2 
                 } else {
                     1
@@ -553,7 +554,7 @@ pub mod instruction_func {
         cycles
     }
 
-    pub fn bne(cpu: &mut CPU, memory: &mut Memory, mode: &AddressingMode, time: usize) -> usize {
+    pub fn bne(cpu: &mut CPU, memory: &mut MainMemory, mode: &AddressingMode, time: usize) -> usize {
         let (operand, _) = match *mode {
             AddressingMode::Relative =>
                 get_operand_using_addr_mode(mode, cpu, memory),
@@ -566,7 +567,7 @@ pub mod instruction_func {
             if !cpu.p.z {
                 let old_pc = cpu.pc;
                 cpu.pc = cpu.pc + operand;
-                if Memory::check_if_page_crossed(old_pc, cpu.pc) {
+                if MainMemory::check_if_page_crossed(old_pc, cpu.pc) {
                     2 
                 } else {
                     1
@@ -580,7 +581,7 @@ pub mod instruction_func {
         cycles
     }
 
-    pub fn bmi(cpu: &mut CPU, memory: &mut Memory, mode: &AddressingMode, time: usize) -> usize {
+    pub fn bmi(cpu: &mut CPU, memory: &mut MainMemory, mode: &AddressingMode, time: usize) -> usize {
         let (operand, _) = match *mode {
             AddressingMode::Relative =>
                 get_operand_using_addr_mode(mode, cpu, memory),
@@ -593,7 +594,7 @@ pub mod instruction_func {
             if cpu.p.n {
                 let old_pc = cpu.pc;
                 cpu.pc = cpu.pc + operand;
-                if Memory::check_if_page_crossed(old_pc, cpu.pc) {
+                if MainMemory::check_if_page_crossed(old_pc, cpu.pc) {
                     2 
                 } else {
                     1
@@ -607,7 +608,7 @@ pub mod instruction_func {
         cycles
     }
 
-    pub fn bpl(cpu: &mut CPU, memory: &mut Memory, mode: &AddressingMode, time: usize) -> usize {
+    pub fn bpl(cpu: &mut CPU, memory: &mut MainMemory, mode: &AddressingMode, time: usize) -> usize {
         let (operand, _) = match *mode {
             AddressingMode::Relative =>
                 get_operand_using_addr_mode(mode, cpu, memory),
@@ -620,7 +621,7 @@ pub mod instruction_func {
             if !cpu.p.n {
                 let old_pc = cpu.pc;
                 cpu.pc = cpu.pc + operand;
-                if Memory::check_if_page_crossed(old_pc, cpu.pc) {
+                if MainMemory::check_if_page_crossed(old_pc, cpu.pc) {
                     2 
                 } else {
                     1
@@ -634,7 +635,7 @@ pub mod instruction_func {
         cycles
     }
 
-    pub fn bvc(cpu: &mut CPU, memory: &mut Memory, mode: &AddressingMode, time: usize) -> usize {
+    pub fn bvc(cpu: &mut CPU, memory: &mut MainMemory, mode: &AddressingMode, time: usize) -> usize {
         let (operand, _) = match *mode {
             AddressingMode::Relative =>
                 get_operand_using_addr_mode(mode, cpu, memory),
@@ -647,7 +648,7 @@ pub mod instruction_func {
             if !cpu.p.v {
                 let old_pc = cpu.pc;
                 cpu.pc = cpu.pc + operand;
-                if Memory::check_if_page_crossed(old_pc, cpu.pc) {
+                if MainMemory::check_if_page_crossed(old_pc, cpu.pc) {
                     2 
                 } else {
                     1
@@ -661,7 +662,7 @@ pub mod instruction_func {
         cycles
     }
 
-    pub fn bvs(cpu: &mut CPU, memory: &mut Memory, mode: &AddressingMode, time: usize) -> usize {
+    pub fn bvs(cpu: &mut CPU, memory: &mut MainMemory, mode: &AddressingMode, time: usize) -> usize {
         let (operand, _) = match *mode {
             AddressingMode::Relative =>
                 get_operand_using_addr_mode(mode, cpu, memory),
@@ -674,7 +675,7 @@ pub mod instruction_func {
             if cpu.p.v {
                 let old_pc = cpu.pc;
                 cpu.pc = cpu.pc + operand;
-                if Memory::check_if_page_crossed(old_pc, cpu.pc) {
+                if MainMemory::check_if_page_crossed(old_pc, cpu.pc) {
                     2 
                 } else {
                     1
@@ -688,7 +689,7 @@ pub mod instruction_func {
         cycles
     }
 
-    pub fn bit(cpu: &mut CPU, memory: &mut Memory, mode: &AddressingMode, time: usize) -> usize {
+    pub fn bit(cpu: &mut CPU, memory: &mut MainMemory, mode: &AddressingMode, time: usize) -> usize {
 
         let (operand, _) = match *mode {
             AddressingMode::ZeroPage | AddressingMode::Absolute =>
@@ -705,7 +706,7 @@ pub mod instruction_func {
         time
     }
 
-    pub fn brk(cpu: &mut CPU, memory: &mut Memory, mode: &AddressingMode, time: usize) -> usize {
+    pub fn brk(cpu: &mut CPU, memory: &mut MainMemory, mode: &AddressingMode, time: usize) -> usize {
         let (_, _) = match *mode {
             AddressingMode::Implied =>
                 get_operand_using_addr_mode(mode, cpu, memory),
@@ -729,7 +730,7 @@ pub mod instruction_func {
         time
     }
 
-    pub fn clc(cpu: &mut CPU, memory: &Memory, mode: &AddressingMode, time: usize) -> usize {
+    pub fn clc(cpu: &mut CPU, memory: &MainMemory, mode: &AddressingMode, time: usize) -> usize {
         let (_, _) = match *mode {
             AddressingMode::Implied =>
                 get_operand_using_addr_mode(mode, cpu, memory),
@@ -741,7 +742,7 @@ pub mod instruction_func {
         time
     }
 
-    pub fn cld(cpu: &mut CPU, memory: &Memory, mode: &AddressingMode, time: usize) -> usize {
+    pub fn cld(cpu: &mut CPU, memory: &MainMemory, mode: &AddressingMode, time: usize) -> usize {
         let (_, _) = match *mode {
             AddressingMode::Implied =>
                 get_operand_using_addr_mode(mode, cpu, memory),
@@ -753,7 +754,7 @@ pub mod instruction_func {
         time
     }
 
-    pub fn cli(cpu: &mut CPU, memory: &Memory, mode: &AddressingMode, time: usize) -> usize {
+    pub fn cli(cpu: &mut CPU, memory: &MainMemory, mode: &AddressingMode, time: usize) -> usize {
         let (_, _) = match *mode {
             AddressingMode::Implied =>
                 get_operand_using_addr_mode(mode, cpu, memory),
@@ -765,7 +766,7 @@ pub mod instruction_func {
         time
     }
 
-    pub fn clv(cpu: &mut CPU, memory: &Memory, mode: &AddressingMode, time: usize) -> usize {
+    pub fn clv(cpu: &mut CPU, memory: &MainMemory, mode: &AddressingMode, time: usize) -> usize {
         let (_, _) = match *mode {
             AddressingMode::Implied =>
                 get_operand_using_addr_mode(mode, cpu, memory),
@@ -777,7 +778,7 @@ pub mod instruction_func {
         time
     }
 
-    pub fn cmp(cpu: &mut CPU, memory: &Memory, mode: &AddressingMode, time: usize) -> usize {
+    pub fn cmp(cpu: &mut CPU, memory: &MainMemory, mode: &AddressingMode, time: usize) -> usize {
         let (operand, extra_cycles) = match *mode {
             AddressingMode::Immediate | AddressingMode::ZeroPage | AddressingMode::ZeroPageX
             | AddressingMode::Absolute | AddressingMode::AbsoluteX | AddressingMode::AbsoluteY
@@ -802,7 +803,7 @@ pub mod instruction_func {
         cycles
     }
 
-    pub fn cpx(cpu: &mut CPU, memory: &Memory, mode: &AddressingMode, time: usize) -> usize {
+    pub fn cpx(cpu: &mut CPU, memory: &MainMemory, mode: &AddressingMode, time: usize) -> usize {
         let (operand, _) = match *mode {
             AddressingMode::Immediate | AddressingMode::ZeroPage | AddressingMode::Absolute =>
                 get_operand_using_addr_mode(mode, cpu, memory),
@@ -824,7 +825,7 @@ pub mod instruction_func {
         time
     }
 
-    pub fn cpy(cpu: &mut CPU, memory: &Memory, mode: &AddressingMode, time: usize) -> usize {
+    pub fn cpy(cpu: &mut CPU, memory: &MainMemory, mode: &AddressingMode, time: usize) -> usize {
         let (operand, _) = match *mode {
             AddressingMode::Immediate | AddressingMode::ZeroPage | AddressingMode::Absolute =>
                 get_operand_using_addr_mode(mode, cpu, memory),
@@ -846,7 +847,7 @@ pub mod instruction_func {
         time
     }
 
-    pub fn dec(cpu: &mut CPU, memory: &mut Memory, mode: &AddressingMode, time: usize) -> usize {
+    pub fn dec(cpu: &mut CPU, memory: &mut MainMemory, mode: &AddressingMode, time: usize) -> usize {
         
         let (operand, _) = match *mode {
             AddressingMode::ZeroPage | AddressingMode::ZeroPageX
@@ -865,7 +866,7 @@ pub mod instruction_func {
         time
     }
 
-    pub fn dex(cpu: &mut CPU, memory: &mut Memory, mode: &AddressingMode, time: usize) -> usize {
+    pub fn dex(cpu: &mut CPU, memory: &mut MainMemory, mode: &AddressingMode, time: usize) -> usize {
         
         let (_, _) = match *mode {
             AddressingMode::Implied =>
@@ -881,7 +882,7 @@ pub mod instruction_func {
         time
     }
 
-    pub fn dey(cpu: &mut CPU, memory: &mut Memory, mode: &AddressingMode, time: usize) -> usize {
+    pub fn dey(cpu: &mut CPU, memory: &mut MainMemory, mode: &AddressingMode, time: usize) -> usize {
         
         let (_, _) = match *mode {
             AddressingMode::Implied =>
@@ -897,7 +898,7 @@ pub mod instruction_func {
         time
     }
 
-    pub fn eor(cpu: &mut CPU, memory: &Memory, mode: &AddressingMode, time: usize) -> usize {
+    pub fn eor(cpu: &mut CPU, memory: &MainMemory, mode: &AddressingMode, time: usize) -> usize {
         
         let (operand, extra_cycles) = match *mode {
             AddressingMode::Immediate | AddressingMode::ZeroPage | AddressingMode::ZeroPageX
@@ -924,7 +925,7 @@ pub mod instruction_func {
         cycles
     }
 
-    pub fn inc(cpu: &mut CPU, memory: &mut Memory, mode: &AddressingMode, time: usize) -> usize {
+    pub fn inc(cpu: &mut CPU, memory: &mut MainMemory, mode: &AddressingMode, time: usize) -> usize {
         
         let (operand, _) = match *mode {
             AddressingMode::ZeroPage | AddressingMode::ZeroPageX
@@ -943,7 +944,7 @@ pub mod instruction_func {
         time
     }
 
-    pub fn inx(cpu: &mut CPU, memory: &mut Memory, mode: &AddressingMode, time: usize) -> usize {
+    pub fn inx(cpu: &mut CPU, memory: &mut MainMemory, mode: &AddressingMode, time: usize) -> usize {
         
         let (_, _) = match *mode {
             AddressingMode::Implied =>
@@ -959,7 +960,7 @@ pub mod instruction_func {
         time
     }
 
-    pub fn iny(cpu: &mut CPU, memory: &mut Memory, mode: &AddressingMode, time: usize) -> usize {
+    pub fn iny(cpu: &mut CPU, memory: &mut MainMemory, mode: &AddressingMode, time: usize) -> usize {
         
         let (_, _) = match *mode {
             AddressingMode::Implied =>
@@ -975,7 +976,7 @@ pub mod instruction_func {
         time
     }
 
-    pub fn jmp(cpu: &mut CPU, memory: &Memory, mode: &AddressingMode, time: usize) -> usize {
+    pub fn jmp(cpu: &mut CPU, memory: &MainMemory, mode: &AddressingMode, time: usize) -> usize {
 
         let (operand, _) = match *mode {
             AddressingMode::Absolute | AddressingMode::Indirect =>
@@ -988,7 +989,7 @@ pub mod instruction_func {
         time
     }
 
-    pub fn jsr(cpu: &mut CPU, memory: &mut Memory, mode: &AddressingMode, time: usize) -> usize {
+    pub fn jsr(cpu: &mut CPU, memory: &mut MainMemory, mode: &AddressingMode, time: usize) -> usize {
 
         let (operand, _) = match *mode {
             AddressingMode::Absolute =>
@@ -1007,7 +1008,7 @@ pub mod instruction_func {
         time
     }
 
-    pub fn lda(cpu: &mut CPU, memory: &Memory, mode: &AddressingMode, time: usize) -> usize {
+    pub fn lda(cpu: &mut CPU, memory: &MainMemory, mode: &AddressingMode, time: usize) -> usize {
 
         let (operand, extra_cycles) = match *mode {
             AddressingMode::Immediate | AddressingMode::ZeroPage | AddressingMode::ZeroPageX
@@ -1034,7 +1035,7 @@ pub mod instruction_func {
         cycles
     }
 
-    pub fn ldx(cpu: &mut CPU, memory: &Memory, mode: &AddressingMode, time: usize) -> usize {
+    pub fn ldx(cpu: &mut CPU, memory: &MainMemory, mode: &AddressingMode, time: usize) -> usize {
 
         let (operand, extra_cycles) = match *mode {
             AddressingMode::Immediate | AddressingMode::ZeroPage | AddressingMode::ZeroPageY
@@ -1060,7 +1061,7 @@ pub mod instruction_func {
         cycles
     }
 
-    pub fn ldy(cpu: &mut CPU, memory: &Memory, mode: &AddressingMode, time: usize) -> usize {
+    pub fn ldy(cpu: &mut CPU, memory: &MainMemory, mode: &AddressingMode, time: usize) -> usize {
 
         let (operand, extra_cycles) = match *mode {
             AddressingMode::Immediate | AddressingMode::ZeroPage | AddressingMode::ZeroPageX
@@ -1086,7 +1087,7 @@ pub mod instruction_func {
         cycles
     }
 
-    pub fn lsr(cpu: &mut CPU, memory: &mut Memory, mode: &AddressingMode, time: usize) -> usize {
+    pub fn lsr(cpu: &mut CPU, memory: &mut MainMemory, mode: &AddressingMode, time: usize) -> usize {
         
         let (operand, _) = match *mode {
             AddressingMode::Accumulator | AddressingMode::ZeroPage | AddressingMode::ZeroPageX
@@ -1116,7 +1117,7 @@ pub mod instruction_func {
         time
     }
 
-    pub fn nop(cpu: &mut CPU, memory: &Memory, mode: &AddressingMode, time: usize) -> usize {
+    pub fn nop(cpu: &mut CPU, memory: &MainMemory, mode: &AddressingMode, time: usize) -> usize {
         let (_, _) = match *mode {
             AddressingMode::Implied =>
                 get_operand_using_addr_mode(mode, cpu, memory),
@@ -1126,7 +1127,7 @@ pub mod instruction_func {
         time
     }
 
-    pub fn ora(cpu: &mut CPU, memory: &Memory, mode: &AddressingMode, time: usize) -> usize {
+    pub fn ora(cpu: &mut CPU, memory: &MainMemory, mode: &AddressingMode, time: usize) -> usize {
         
         let (operand, extra_cycles) = match *mode {
             AddressingMode::Immediate | AddressingMode::ZeroPage | AddressingMode::ZeroPageX
@@ -1153,7 +1154,7 @@ pub mod instruction_func {
         cycles
     }
 
-    pub fn pha(cpu: &mut CPU, memory: &mut Memory, mode: &AddressingMode, time: usize) -> usize {
+    pub fn pha(cpu: &mut CPU, memory: &mut MainMemory, mode: &AddressingMode, time: usize) -> usize {
         
         let (_, _) = match *mode {
             AddressingMode::Implied =>
@@ -1166,7 +1167,7 @@ pub mod instruction_func {
         time
     }
 
-    pub fn php(cpu: &mut CPU, memory: &mut Memory, mode: &AddressingMode, time: usize) -> usize {
+    pub fn php(cpu: &mut CPU, memory: &mut MainMemory, mode: &AddressingMode, time: usize) -> usize {
         
         let (_, _) = match *mode {
             AddressingMode::Implied =>
@@ -1179,7 +1180,7 @@ pub mod instruction_func {
         time
     }
 
-    pub fn pla(cpu: &mut CPU, memory: &mut Memory, mode: &AddressingMode, time: usize) -> usize {
+    pub fn pla(cpu: &mut CPU, memory: &mut MainMemory, mode: &AddressingMode, time: usize) -> usize {
         
         let (_, _) = match *mode {
             AddressingMode::Implied =>
@@ -1196,7 +1197,7 @@ pub mod instruction_func {
         time
     }
 
-    pub fn plp(cpu: &mut CPU, memory: &mut Memory, mode: &AddressingMode, time: usize) -> usize {
+    pub fn plp(cpu: &mut CPU, memory: &mut MainMemory, mode: &AddressingMode, time: usize) -> usize {
         
         let (_, _) = match *mode {
             AddressingMode::Implied =>
@@ -1211,7 +1212,7 @@ pub mod instruction_func {
         time
     }
 
-    pub fn rol(cpu: &mut CPU, memory: &mut Memory, mode: &AddressingMode, time: usize) -> usize {
+    pub fn rol(cpu: &mut CPU, memory: &mut MainMemory, mode: &AddressingMode, time: usize) -> usize {
         let (operand, _) = match *mode {
             AddressingMode::Accumulator | AddressingMode::ZeroPage | AddressingMode::ZeroPageX
             | AddressingMode::Absolute | AddressingMode::AbsoluteX =>
@@ -1242,7 +1243,7 @@ pub mod instruction_func {
         time
     }
 
-    pub fn ror(cpu: &mut CPU, memory: &mut Memory, mode: &AddressingMode, time: usize) -> usize {
+    pub fn ror(cpu: &mut CPU, memory: &mut MainMemory, mode: &AddressingMode, time: usize) -> usize {
         
         let (operand, _) = match *mode {
             AddressingMode::Accumulator | AddressingMode::ZeroPage | AddressingMode::ZeroPageX
@@ -1274,7 +1275,7 @@ pub mod instruction_func {
         time
     }
 
-    pub fn rti(cpu: &mut CPU, memory: &mut Memory, mode: &AddressingMode, time: usize) -> usize {
+    pub fn rti(cpu: &mut CPU, memory: &mut MainMemory, mode: &AddressingMode, time: usize) -> usize {
         
         let (_, _) = match *mode {
             AddressingMode::Implied =>
@@ -1294,7 +1295,7 @@ pub mod instruction_func {
         time
     }
 
-    pub fn rts(cpu: &mut CPU, memory: &mut Memory, mode: &AddressingMode, time: usize) -> usize {
+    pub fn rts(cpu: &mut CPU, memory: &mut MainMemory, mode: &AddressingMode, time: usize) -> usize {
         
         let (_, _) = match *mode {
             AddressingMode::Implied =>
@@ -1312,7 +1313,7 @@ pub mod instruction_func {
         time
     }
 
-    pub fn sec(cpu: &mut CPU, memory: &Memory, mode: &AddressingMode, time: usize) -> usize {
+    pub fn sec(cpu: &mut CPU, memory: &MainMemory, mode: &AddressingMode, time: usize) -> usize {
 
         let (_, _) = match *mode {
             AddressingMode::Implied =>
@@ -1325,7 +1326,7 @@ pub mod instruction_func {
         time
     }
 
-    pub fn sed(cpu: &mut CPU, memory: &Memory, mode: &AddressingMode, time: usize) -> usize {
+    pub fn sed(cpu: &mut CPU, memory: &MainMemory, mode: &AddressingMode, time: usize) -> usize {
         let (_, _) = match *mode {
             AddressingMode::Implied =>
                 get_operand_using_addr_mode(mode, cpu, memory),
@@ -1337,7 +1338,7 @@ pub mod instruction_func {
         time
     }
 
-    pub fn sei(cpu: &mut CPU, memory: &Memory, mode: &AddressingMode, time: usize) -> usize {
+    pub fn sei(cpu: &mut CPU, memory: &MainMemory, mode: &AddressingMode, time: usize) -> usize {
         let (_, _) = match *mode {
             AddressingMode::Implied =>
                 get_operand_using_addr_mode(mode, cpu, memory),
@@ -1349,7 +1350,7 @@ pub mod instruction_func {
         time
     }
 
-    pub fn sta(cpu: &mut CPU, memory: &mut Memory, mode: &AddressingMode, time: usize) -> usize {
+    pub fn sta(cpu: &mut CPU, memory: &mut MainMemory, mode: &AddressingMode, time: usize) -> usize {
         
         let (operand, extra_cycles) = match *mode {
             AddressingMode::ZeroPage | AddressingMode::ZeroPageX | AddressingMode::Absolute
@@ -1365,7 +1366,7 @@ pub mod instruction_func {
         cycles
     }
 
-    pub fn stx(cpu: &mut CPU, memory: &mut Memory, mode: &AddressingMode, time: usize) -> usize {
+    pub fn stx(cpu: &mut CPU, memory: &mut MainMemory, mode: &AddressingMode, time: usize) -> usize {
         
         let (operand, extra_cycles) = match *mode {
             AddressingMode::ZeroPage | AddressingMode::ZeroPageY | AddressingMode::Absolute =>
@@ -1379,7 +1380,7 @@ pub mod instruction_func {
         cycles
     }
 
-    pub fn sty(cpu: &mut CPU, memory: &mut Memory, mode: &AddressingMode, time: usize) -> usize {
+    pub fn sty(cpu: &mut CPU, memory: &mut MainMemory, mode: &AddressingMode, time: usize) -> usize {
         
         let (operand, extra_cycles) = match *mode {
             AddressingMode::ZeroPage | AddressingMode::ZeroPageX | AddressingMode::Absolute =>
@@ -1393,7 +1394,7 @@ pub mod instruction_func {
         cycles
     }
 
-    pub fn sbc(cpu: &mut CPU, memory: &Memory, mode: &AddressingMode, time: usize) -> usize {
+    pub fn sbc(cpu: &mut CPU, memory: &MainMemory, mode: &AddressingMode, time: usize) -> usize {
 
         let (operand, extra_cycles) = match *mode {
             AddressingMode::Immediate | AddressingMode::ZeroPage | AddressingMode::ZeroPageX
@@ -1430,7 +1431,7 @@ pub mod instruction_func {
         cycles
     }
 
-    pub fn tax(cpu: &mut CPU, memory: &Memory, mode: &AddressingMode, time: usize) -> usize {
+    pub fn tax(cpu: &mut CPU, memory: &MainMemory, mode: &AddressingMode, time: usize) -> usize {
         
         let (_, _) = match *mode {
             AddressingMode::Implied =>
@@ -1445,7 +1446,7 @@ pub mod instruction_func {
         time
     }
 
-    pub fn tay(cpu: &mut CPU, memory: &Memory, mode: &AddressingMode, time: usize) -> usize {
+    pub fn tay(cpu: &mut CPU, memory: &MainMemory, mode: &AddressingMode, time: usize) -> usize {
         
         let (_, _) = match *mode {
             AddressingMode::Implied =>
@@ -1460,7 +1461,7 @@ pub mod instruction_func {
         time
     }
 
-    pub fn tsx(cpu: &mut CPU, memory: &Memory, mode: &AddressingMode, time: usize) -> usize {
+    pub fn tsx(cpu: &mut CPU, memory: &MainMemory, mode: &AddressingMode, time: usize) -> usize {
         
         let (_, _) = match *mode {
             AddressingMode::Implied =>
@@ -1475,7 +1476,7 @@ pub mod instruction_func {
         time
     }
 
-    pub fn txa(cpu: &mut CPU, memory: &Memory, mode: &AddressingMode, time: usize) -> usize {
+    pub fn txa(cpu: &mut CPU, memory: &MainMemory, mode: &AddressingMode, time: usize) -> usize {
         
         let (_, _) = match *mode {
             AddressingMode::Implied =>
@@ -1490,7 +1491,7 @@ pub mod instruction_func {
         time
     }
 
-    pub fn txs(cpu: &mut CPU, memory: &Memory, mode: &AddressingMode, time: usize) -> usize {
+    pub fn txs(cpu: &mut CPU, memory: &MainMemory, mode: &AddressingMode, time: usize) -> usize {
         
         let (_, _) = match *mode {
             AddressingMode::Implied =>
@@ -1503,7 +1504,7 @@ pub mod instruction_func {
         time
     }
 
-    pub fn tya(cpu: &mut CPU, memory: &Memory, mode: &AddressingMode, time: usize) -> usize {
+    pub fn tya(cpu: &mut CPU, memory: &MainMemory, mode: &AddressingMode, time: usize) -> usize {
         
         let (_, _) = match *mode {
             AddressingMode::Implied =>
@@ -1523,8 +1524,8 @@ pub mod instruction_func {
 mod tests {
     use super::*;
 
-    fn generate_cpu_and_mem() -> (CPU, Memory) {
-        (CPU::new(), Memory::new())
+    fn generate_cpu_and_mem() -> (CPU, MainMemory) {
+        (CPU::new(), MainMemory::new())
     }
 
     #[test]

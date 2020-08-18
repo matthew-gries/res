@@ -2,7 +2,9 @@ use crate::instruction::Instruction;
 use crate::instruction::instruction_func;
 use crate::instruction::INSTRUCTION_TABLE;
 use crate::memory::Memory;
-use crate::memory::MemoryMapSegments;
+use crate::memory::MemorySegmentation;
+use crate::main_memory::MainMemory;
+use crate::main_memory::MainMemorySegment;
 
 /// Structure for handling the status register
 pub struct StatusRegister {
@@ -79,7 +81,7 @@ impl CPU {
     }
 
     /// Push a value onto the stack
-    pub fn push_stack(&mut self, memory: &mut Memory, val: u8) -> &Self {
+    pub fn push_stack(&mut self, memory: &mut MainMemory, val: u8) -> &Self {
         let stack_addr = STACK_MEMORY_PAGE + self.sp as u16;
         memory.write(stack_addr, val).unwrap();
         let (new_stack_addr, underflowed) = self.sp.overflowing_sub(1);
@@ -91,7 +93,7 @@ impl CPU {
     }
 
     /// Retrieve the value at the top of the stack
-    pub fn pop_stack(&mut self, memory: &mut Memory) -> u8 {
+    pub fn pop_stack(&mut self, memory: &mut MainMemory) -> u8 {
         let (new_stack_addr, overflowed) = self.sp.overflowing_add(1);
         self.sp = new_stack_addr;
         if overflowed {
@@ -107,14 +109,14 @@ impl CPU {
     }
 
     /// Get the byte at the PC and increment the PC by 1
-    pub fn read_byte_and_increment(&mut self, memory: &Memory) -> u8 {
+    pub fn read_byte_and_increment(&mut self, memory: &MainMemory) -> u8 {
         let byte = memory.read(self.pc);
         self.pc += 1;
         byte
     }
 
     /// Perform one fetch-decode-execute cycle
-    pub fn instruction_cycle(&mut self, memory: &mut Memory) -> Result<(), String> {
+    pub fn instruction_cycle(&mut self, memory: &mut MainMemory) -> Result<(), String> {
         println!("{:x}", self.pc);
         let opcode = self.read_byte_and_increment(memory);
         let instr = INSTRUCTION_TABLE.get(&opcode);
@@ -193,17 +195,17 @@ impl CPU {
         Ok(())
     }
 
-    pub fn mem_write(memory: &mut Memory, addr: u16, byte: u8) -> Result<(), &'static str> {
+    pub fn mem_write(memory: &mut MainMemory, addr: u16, byte: u8) -> Result<(), &'static str> {
 	
-	match Memory::get_mem_map_segment(addr) {
-	    MemoryMapSegments::ExpansionRom | MemoryMapSegments::PRGROM => {
+	match MainMemorySegment::get_segmentation(addr) {
+	    MainMemorySegment::ExpansionRom | MainMemorySegment::PRGROM => {
 		Err("CPU attempted to write to read only memory!")
 	    }
 	    _ => memory.write(addr, byte)
 	}
     }
 
-    pub fn mem_read(memory: &Memory, addr: u16) -> u8 {
+    pub fn mem_read(memory: &MainMemory, addr: u16) -> u8 {
 
 	memory.read(addr)
     }

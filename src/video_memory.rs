@@ -79,3 +79,105 @@ impl Memory<VideoMemorySegment> for VideoMemory {
 	Ok(())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn read_pattern_table() {
+	let mut data = [0; VIDEO_MEMORY_MAP_ADDRESSABLE_RANGE];
+	data[0x0] = 1;
+	data[0x1FFF] = 2;
+	let memory = VideoMemory{data};
+
+	assert_eq!(memory.read(0x0), 1);
+	assert_eq!(memory.read(0x4000), 1);
+	assert_eq!(memory.read(0x1FFF), 2);
+	assert_eq!(memory.read(0x5FFF), 2);
+    }
+
+    #[test]
+    fn write_pattern_table() {
+	
+	let mut memory = VideoMemory::new();
+
+	memory.write(0x0, 1).unwrap();
+	memory.write(0x1FFF, 2).unwrap();
+	memory.write(0x5FFE, 3).unwrap();
+
+	assert_eq!(memory.read(0x0), 1);
+	assert_eq!(memory.read(0x4000), 1);
+	assert_eq!(memory.read(0x1FFF), 2);
+	assert_eq!(memory.read(0x5FFF), 2);
+	assert_eq!(memory.read(0x1FFE), 3);
+	assert_eq!(memory.read(0x5FFE), 3);
+    }
+
+    #[test]
+    fn read_name_table() {
+	let mut data = [0; VIDEO_MEMORY_MAP_ADDRESSABLE_RANGE];
+	data[0x2000] = 1;
+	data[0x2EFF] = 2;
+	data[0x2FFF] = 3;
+	let memory = VideoMemory{data};
+
+	assert_eq!(memory.read(0x2000), 1);
+	assert_eq!(memory.read(0x3000), 1);
+	assert_eq!(memory.read(0x2EFF), 2);
+	assert_eq!(memory.read(0x3EFF), 2);
+	assert_eq!(memory.read(0x2FFF), 3);
+	assert_eq!(memory.read(0x3FFF), 0);
+    }
+
+    #[test]
+    fn write_name_table() {
+
+	let mut memory = VideoMemory::new();
+
+	memory.write(0x2000, 1).unwrap();
+	memory.write(0x2EFF, 2).unwrap();
+	memory.write(0x2FFF, 3).unwrap();
+
+	assert_eq!(memory.read(0x2000), 1);
+	assert_eq!(memory.read(0x3000), 1);
+	assert_eq!(memory.read(0x2EFF), 2);
+	assert_eq!(memory.read(0x3EFF), 2);
+	assert_eq!(memory.read(0x2FFF), 3);
+	assert_eq!(memory.read(0x3FFF), 0);
+    }
+
+    #[test]
+    fn read_palettes() {
+
+	let mut data = [0; VIDEO_MEMORY_MAP_ADDRESSABLE_RANGE];
+
+	data[0x3F00] = 1;
+	data[0x3F1F] = 2;
+
+	let memory = VideoMemory{data};
+
+	assert_eq!(memory.read(0x3F00), 1);
+	assert_eq!(memory.read(0x3F20), 1);
+	assert_eq!(memory.read(0x3FE0), 1);
+	assert_eq!(memory.read(0x3F1F), 2);
+	assert_eq!(memory.read(0x3F3F), 2);
+	assert_eq!(memory.read(0x3FFF), 2);
+    }
+
+    #[test]
+    fn write_palettes() {
+
+	let mut memory = VideoMemory::new();
+	
+	memory.write(0x3F00, 1).unwrap();
+	memory.write(0x3F1F, 2).unwrap();
+
+	assert_eq!(memory.read(0x3F00), 1);
+	assert_eq!(memory.read(0x3F20), 1);
+	assert_eq!(memory.read(0x3FE0), 1);
+	assert_eq!(memory.read(0x3F1F), 2);
+	assert_eq!(memory.read(0x3F3F), 2);
+	assert_eq!(memory.read(0x3FFF), 2);
+    }
+}

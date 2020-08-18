@@ -2,7 +2,8 @@ use crate::cpu::CPU;
 use crate::mapper;
 use crate::mapper::Mapper;
 use crate::memory::Memory;
-use crate::memory::MEMORY_MAP_ADDRESSABLE_RANGE;
+use crate::main_memory::MainMemory;
+use crate::main_memory::MAIN_MEMORY_MAP_ADDRESSABLE_RANGE;
 
 use nes_system_error::NesSystemError;
 
@@ -13,7 +14,7 @@ const HEADER_SIZE: usize = 16;
 
 pub struct NesSystem {
     cpu: CPU,
-    memory: Memory
+    memory: MainMemory
 }
 
 enum FileHeader {
@@ -60,7 +61,7 @@ impl NesSystem {
             Err(err) => {return Err(NesSystemError::SystemIOError(err))},
         };
         
-        let mut memory = Memory::new();
+        let mut memory = MainMemory::new();
 
         let file_format = Self::find_file_header(&mut rom)?;
 
@@ -143,7 +144,7 @@ impl NesSystem {
         INESInfo{nes_info, prg_ram_size, tv_system, prg_ram, bus_conflicts}
     }
 
-    fn i_nes_handler(rom: &mut File, header: &[u8; HEADER_SIZE], memory: &mut Memory) -> Result<(), NesSystemError> {
+    fn i_nes_handler(rom: &mut File, header: &[u8; HEADER_SIZE], memory: &mut MainMemory) -> Result<(), NesSystemError> {
 
         // get the size of the PRG ROM
         let prg_rom_bytes: usize = header[4] as usize;
@@ -187,7 +188,7 @@ impl NesSystem {
         Ok(())
     }
 
-    fn nes_2_0_handler(rom: &mut File, header: &[u8; HEADER_SIZE], memory: &mut Memory) -> Result<(), NesSystemError> {
+    fn nes_2_0_handler(rom: &mut File, header: &[u8; HEADER_SIZE], memory: &mut MainMemory) -> Result<(), NesSystemError> {
         
         Ok(())
     }

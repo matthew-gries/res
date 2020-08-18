@@ -80,3 +80,99 @@ impl Memory<MainMemorySegment> for MainMemory {
 	Ok(())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn read_ram() {
+	let mut data = [0; MAIN_MEMORY_MAP_ADDRESSABLE_RANGE];
+	data[0x0] = 1;
+	data[0x1] = 2;
+	data[0x07FF] = 3;
+
+	let memory = MainMemory{data};
+	
+	assert_eq!(memory.read(0x0), 1);
+	assert_eq!(memory.read(0x0800), 1);
+	assert_eq!(memory.read(0x1000), 1);
+	assert_eq!(memory.read(0x1800), 1);
+
+	assert_eq!(memory.read(0x1), 2);
+	assert_eq!(memory.read(0x0801), 2);
+	assert_eq!(memory.read(0x1001), 2);
+	assert_eq!(memory.read(0x1801), 2);
+
+	assert_eq!(memory.read(0x07FF), 3);
+	assert_eq!(memory.read(0x0FFF), 3);
+	assert_eq!(memory.read(0x17FF), 3);
+	assert_eq!(memory.read(0x1FFF), 3);
+    }
+
+    #[test]
+    fn write_ram() {
+	let mut memory = MainMemory::new();
+
+	memory.write(0x0, 1).unwrap();
+	assert_eq!(memory.read(0x0), 1);
+	assert_eq!(memory.read(0x0800), 1);
+	assert_eq!(memory.read(0x1000), 1);
+	assert_eq!(memory.read(0x1800), 1);
+
+	memory.write(0x1, 2).unwrap();
+	assert_eq!(memory.read(0x1), 2);
+	assert_eq!(memory.read(0x0801), 2);
+	assert_eq!(memory.read(0x1001), 2);
+	assert_eq!(memory.read(0x1801), 2);
+
+	memory.write(0x07FF, 3).unwrap();
+	assert_eq!(memory.read(0x07FF), 3);
+	assert_eq!(memory.read(0x0FFF), 3);
+	assert_eq!(memory.read(0x17FF), 3);
+	assert_eq!(memory.read(0x1FFF), 3);
+    }
+
+    #[test]
+    fn read_io_reg() {
+	let mut data = [0; MAIN_MEMORY_MAP_ADDRESSABLE_RANGE];
+	data[0x2000] = 1;
+	data[0x2007] = 2;
+	data[0x4000] = 3;
+	data[0x401F] = 4;
+
+	let memory = MainMemory{data};
+	
+	assert_eq!(memory.read(0x2000), 1);
+	assert_eq!(memory.read(0x2008), 1);
+	assert_eq!(memory.read(0x3FF8), 1);
+
+	assert_eq!(memory.read(0x2007), 2);
+	assert_eq!(memory.read(0x200F), 2);
+	assert_eq!(memory.read(0x3FFF), 2);
+
+	assert_eq!(memory.read(0x4000), 3);
+	assert_eq!(memory.read(0x401F), 4);
+    }
+
+    #[test]
+    fn write_io_reg() {
+	let mut memory = MainMemory::new();
+
+	memory.write(0x2000, 1).unwrap();
+	memory.write(0x2007, 2).unwrap();
+	memory.write(0x4000, 3).unwrap();
+	memory.write(0x401F, 4).unwrap();
+
+	assert_eq!(memory.read(0x2000), 1);
+	assert_eq!(memory.read(0x2008), 1);
+	assert_eq!(memory.read(0x3FF8), 1);
+
+	assert_eq!(memory.read(0x2007), 2);
+	assert_eq!(memory.read(0x200F), 2);
+	assert_eq!(memory.read(0x3FFF), 2);
+
+	assert_eq!(memory.read(0x4000), 3);
+	assert_eq!(memory.read(0x401F), 4);
+    }
+}
