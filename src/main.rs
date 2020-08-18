@@ -6,6 +6,8 @@ extern crate log;
 mod cpu;
 mod mapper;
 mod memory;
+mod main_memory;
+mod video_memory;
 mod instruction;
 mod system;
 
