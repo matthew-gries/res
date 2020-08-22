@@ -9,6 +9,8 @@ use nes_system_error::NesSystemError;
 
 use std::fs::File;
 use std::io::prelude::*;
+use std::u16;
+use std::convert::TryFrom;
 
 const HEADER_SIZE: usize = 16;
 
@@ -180,9 +182,14 @@ impl NesSystem {
         Self::read_from_rom(rom, &mut prg_rom[..])?;
         
         for i in 0..(prg_end-prg_start) {
-            if let Err(err) = memory.write((prg_start+i) as u16, prg_rom[i]) {
-		return Err(NesSystemError::MemoryIOError(err));
-	    }
+
+	    let start_offset = prg_start + i;
+	    let write_address = match u16::try_from(start_offset) {
+		Err(_) => {return Err(NesSystemError::MemoryIOError("Address overflow when loading PRG_ROM"))},
+		Ok(x) => x
+	    };
+	    
+            memory.write(write_address, prg_rom[i]);
         }
 
         Ok(())

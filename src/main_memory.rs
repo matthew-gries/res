@@ -73,11 +73,10 @@ impl Memory<MainMemorySegment> for MainMemory {
         self.data[adjusted_addr as usize]
     }
 
-    fn write(&mut self, addr: u16, byte: u8) -> Result<(), &'static str> {
+    fn write(&mut self, addr: u16, byte: u8) {
 
 	let adjusted_addr = Self::get_adjusted_address(addr);
         self.data[adjusted_addr as usize] = byte;
-	Ok(())
     }
 }
 
@@ -114,19 +113,19 @@ mod tests {
     fn write_ram() {
 	let mut memory = MainMemory::new();
 
-	memory.write(0x0, 1).unwrap();
+	memory.write(0x0, 1);
 	assert_eq!(memory.read(0x0), 1);
 	assert_eq!(memory.read(0x0800), 1);
 	assert_eq!(memory.read(0x1000), 1);
 	assert_eq!(memory.read(0x1800), 1);
 
-	memory.write(0x1, 2).unwrap();
+	memory.write(0x1, 2);
 	assert_eq!(memory.read(0x1), 2);
 	assert_eq!(memory.read(0x0801), 2);
 	assert_eq!(memory.read(0x1001), 2);
 	assert_eq!(memory.read(0x1801), 2);
 
-	memory.write(0x07FF, 3).unwrap();
+	memory.write(0x07FF, 3);
 	assert_eq!(memory.read(0x07FF), 3);
 	assert_eq!(memory.read(0x0FFF), 3);
 	assert_eq!(memory.read(0x17FF), 3);
@@ -159,10 +158,10 @@ mod tests {
     fn write_io_reg() {
 	let mut memory = MainMemory::new();
 
-	memory.write(0x2000, 1).unwrap();
-	memory.write(0x2007, 2).unwrap();
-	memory.write(0x4000, 3).unwrap();
-	memory.write(0x401F, 4).unwrap();
+	memory.write(0x2000, 1);
+	memory.write(0x2007, 2);
+	memory.write(0x4000, 3);
+	memory.write(0x401F, 4);
 
 	assert_eq!(memory.read(0x2000), 1);
 	assert_eq!(memory.read(0x2008), 1);

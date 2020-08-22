@@ -22,7 +22,7 @@ pub enum AddressingMode {
 }
 
 /// Get the operand given the addressing mode, as well as the number of extra cycles if necessary
-pub fn get_operand_using_addr_mode(mode: &AddressingMode, cpu: &mut CPU, memory: &MainMemory) -> (u16, usize) {
+pub fn get_operand_using_addr_mode(mode: &AddressingMode, cpu: &mut CPU, memory: &mut MainMemory) -> (u16, usize) {
 
     match *mode {
         AddressingMode::Immediate => {
@@ -379,7 +379,7 @@ pub mod instruction_func {
     use super::*;
 
     /// Run an ADC instruction and return the number of cycles it took to complete the instruction
-    pub fn adc(cpu: &mut CPU, memory: &MainMemory, mode: &AddressingMode, time: usize) -> usize {
+    pub fn adc(cpu: &mut CPU, memory: &mut MainMemory, mode: &AddressingMode, time: usize) -> usize {
 
         let (operand, extra_cycles) = match *mode {
             AddressingMode::Immediate | AddressingMode::ZeroPage | AddressingMode::ZeroPageX
@@ -416,7 +416,7 @@ pub mod instruction_func {
         cycles
     }
 
-    pub fn and(cpu: &mut CPU, memory: &MainMemory, mode: &AddressingMode, time: usize) -> usize {
+    pub fn and(cpu: &mut CPU, memory: &mut MainMemory, mode: &AddressingMode, time: usize) -> usize {
         
         let (operand, extra_cycles) = match *mode {
             AddressingMode::Immediate | AddressingMode::ZeroPage | AddressingMode::ZeroPageX
@@ -713,6 +713,11 @@ pub mod instruction_func {
             _ => panic!("Unsupported addressing mode {:?} for BRK", *mode),
         };
 
+	if cpu.p.i {
+	    // If interrupt disable flag is set, don't respond to interrupt
+	    return time;
+	}
+
         let pc_low_byte = (cpu.pc & 0x00FF) as u8;
         let pc_high_byte = ((cpu.pc & 0xFF00) >> 8) as u8;
         let flags = cpu.p.as_u8();
@@ -730,7 +735,7 @@ pub mod instruction_func {
         time
     }
 
-    pub fn clc(cpu: &mut CPU, memory: &MainMemory, mode: &AddressingMode, time: usize) -> usize {
+    pub fn clc(cpu: &mut CPU, memory: &mut MainMemory, mode: &AddressingMode, time: usize) -> usize {
         let (_, _) = match *mode {
             AddressingMode::Implied =>
                 get_operand_using_addr_mode(mode, cpu, memory),
@@ -742,7 +747,7 @@ pub mod instruction_func {
         time
     }
 
-    pub fn cld(cpu: &mut CPU, memory: &MainMemory, mode: &AddressingMode, time: usize) -> usize {
+    pub fn cld(cpu: &mut CPU, memory: &mut MainMemory, mode: &AddressingMode, time: usize) -> usize {
         let (_, _) = match *mode {
             AddressingMode::Implied =>
                 get_operand_using_addr_mode(mode, cpu, memory),
@@ -754,7 +759,7 @@ pub mod instruction_func {
         time
     }
 
-    pub fn cli(cpu: &mut CPU, memory: &MainMemory, mode: &AddressingMode, time: usize) -> usize {
+    pub fn cli(cpu: &mut CPU, memory: &mut MainMemory, mode: &AddressingMode, time: usize) -> usize {
         let (_, _) = match *mode {
             AddressingMode::Implied =>
                 get_operand_using_addr_mode(mode, cpu, memory),
@@ -766,7 +771,7 @@ pub mod instruction_func {
         time
     }
 
-    pub fn clv(cpu: &mut CPU, memory: &MainMemory, mode: &AddressingMode, time: usize) -> usize {
+    pub fn clv(cpu: &mut CPU, memory: &mut MainMemory, mode: &AddressingMode, time: usize) -> usize {
         let (_, _) = match *mode {
             AddressingMode::Implied =>
                 get_operand_using_addr_mode(mode, cpu, memory),
@@ -778,7 +783,7 @@ pub mod instruction_func {
         time
     }
 
-    pub fn cmp(cpu: &mut CPU, memory: &MainMemory, mode: &AddressingMode, time: usize) -> usize {
+    pub fn cmp(cpu: &mut CPU, memory: &mut MainMemory, mode: &AddressingMode, time: usize) -> usize {
         let (operand, extra_cycles) = match *mode {
             AddressingMode::Immediate | AddressingMode::ZeroPage | AddressingMode::ZeroPageX
             | AddressingMode::Absolute | AddressingMode::AbsoluteX | AddressingMode::AbsoluteY
@@ -803,7 +808,7 @@ pub mod instruction_func {
         cycles
     }
 
-    pub fn cpx(cpu: &mut CPU, memory: &MainMemory, mode: &AddressingMode, time: usize) -> usize {
+    pub fn cpx(cpu: &mut CPU, memory: &mut MainMemory, mode: &AddressingMode, time: usize) -> usize {
         let (operand, _) = match *mode {
             AddressingMode::Immediate | AddressingMode::ZeroPage | AddressingMode::Absolute =>
                 get_operand_using_addr_mode(mode, cpu, memory),
@@ -825,7 +830,7 @@ pub mod instruction_func {
         time
     }
 
-    pub fn cpy(cpu: &mut CPU, memory: &MainMemory, mode: &AddressingMode, time: usize) -> usize {
+    pub fn cpy(cpu: &mut CPU, memory: &mut MainMemory, mode: &AddressingMode, time: usize) -> usize {
         let (operand, _) = match *mode {
             AddressingMode::Immediate | AddressingMode::ZeroPage | AddressingMode::Absolute =>
                 get_operand_using_addr_mode(mode, cpu, memory),
@@ -898,7 +903,7 @@ pub mod instruction_func {
         time
     }
 
-    pub fn eor(cpu: &mut CPU, memory: &MainMemory, mode: &AddressingMode, time: usize) -> usize {
+    pub fn eor(cpu: &mut CPU, memory: &mut MainMemory, mode: &AddressingMode, time: usize) -> usize {
         
         let (operand, extra_cycles) = match *mode {
             AddressingMode::Immediate | AddressingMode::ZeroPage | AddressingMode::ZeroPageX
@@ -976,7 +981,7 @@ pub mod instruction_func {
         time
     }
 
-    pub fn jmp(cpu: &mut CPU, memory: &MainMemory, mode: &AddressingMode, time: usize) -> usize {
+    pub fn jmp(cpu: &mut CPU, memory: &mut MainMemory, mode: &AddressingMode, time: usize) -> usize {
 
         let (operand, _) = match *mode {
             AddressingMode::Absolute | AddressingMode::Indirect =>
@@ -1008,7 +1013,7 @@ pub mod instruction_func {
         time
     }
 
-    pub fn lda(cpu: &mut CPU, memory: &MainMemory, mode: &AddressingMode, time: usize) -> usize {
+    pub fn lda(cpu: &mut CPU, memory: &mut MainMemory, mode: &AddressingMode, time: usize) -> usize {
 
         let (operand, extra_cycles) = match *mode {
             AddressingMode::Immediate | AddressingMode::ZeroPage | AddressingMode::ZeroPageX
@@ -1035,7 +1040,7 @@ pub mod instruction_func {
         cycles
     }
 
-    pub fn ldx(cpu: &mut CPU, memory: &MainMemory, mode: &AddressingMode, time: usize) -> usize {
+    pub fn ldx(cpu: &mut CPU, memory: &mut MainMemory, mode: &AddressingMode, time: usize) -> usize {
 
         let (operand, extra_cycles) = match *mode {
             AddressingMode::Immediate | AddressingMode::ZeroPage | AddressingMode::ZeroPageY
@@ -1061,7 +1066,7 @@ pub mod instruction_func {
         cycles
     }
 
-    pub fn ldy(cpu: &mut CPU, memory: &MainMemory, mode: &AddressingMode, time: usize) -> usize {
+    pub fn ldy(cpu: &mut CPU, memory: &mut MainMemory, mode: &AddressingMode, time: usize) -> usize {
 
         let (operand, extra_cycles) = match *mode {
             AddressingMode::Immediate | AddressingMode::ZeroPage | AddressingMode::ZeroPageX
@@ -1117,7 +1122,7 @@ pub mod instruction_func {
         time
     }
 
-    pub fn nop(cpu: &mut CPU, memory: &MainMemory, mode: &AddressingMode, time: usize) -> usize {
+    pub fn nop(cpu: &mut CPU, memory: &mut MainMemory, mode: &AddressingMode, time: usize) -> usize {
         let (_, _) = match *mode {
             AddressingMode::Implied =>
                 get_operand_using_addr_mode(mode, cpu, memory),
@@ -1127,7 +1132,7 @@ pub mod instruction_func {
         time
     }
 
-    pub fn ora(cpu: &mut CPU, memory: &MainMemory, mode: &AddressingMode, time: usize) -> usize {
+    pub fn ora(cpu: &mut CPU, memory: &mut MainMemory, mode: &AddressingMode, time: usize) -> usize {
         
         let (operand, extra_cycles) = match *mode {
             AddressingMode::Immediate | AddressingMode::ZeroPage | AddressingMode::ZeroPageX
@@ -1313,7 +1318,7 @@ pub mod instruction_func {
         time
     }
 
-    pub fn sec(cpu: &mut CPU, memory: &MainMemory, mode: &AddressingMode, time: usize) -> usize {
+    pub fn sec(cpu: &mut CPU, memory: &mut MainMemory, mode: &AddressingMode, time: usize) -> usize {
 
         let (_, _) = match *mode {
             AddressingMode::Implied =>
@@ -1326,7 +1331,7 @@ pub mod instruction_func {
         time
     }
 
-    pub fn sed(cpu: &mut CPU, memory: &MainMemory, mode: &AddressingMode, time: usize) -> usize {
+    pub fn sed(cpu: &mut CPU, memory: &mut MainMemory, mode: &AddressingMode, time: usize) -> usize {
         let (_, _) = match *mode {
             AddressingMode::Implied =>
                 get_operand_using_addr_mode(mode, cpu, memory),
@@ -1338,7 +1343,7 @@ pub mod instruction_func {
         time
     }
 
-    pub fn sei(cpu: &mut CPU, memory: &MainMemory, mode: &AddressingMode, time: usize) -> usize {
+    pub fn sei(cpu: &mut CPU, memory: &mut MainMemory, mode: &AddressingMode, time: usize) -> usize {
         let (_, _) = match *mode {
             AddressingMode::Implied =>
                 get_operand_using_addr_mode(mode, cpu, memory),
@@ -1394,7 +1399,7 @@ pub mod instruction_func {
         cycles
     }
 
-    pub fn sbc(cpu: &mut CPU, memory: &MainMemory, mode: &AddressingMode, time: usize) -> usize {
+    pub fn sbc(cpu: &mut CPU, memory: &mut MainMemory, mode: &AddressingMode, time: usize) -> usize {
 
         let (operand, extra_cycles) = match *mode {
             AddressingMode::Immediate | AddressingMode::ZeroPage | AddressingMode::ZeroPageX
@@ -1431,7 +1436,7 @@ pub mod instruction_func {
         cycles
     }
 
-    pub fn tax(cpu: &mut CPU, memory: &MainMemory, mode: &AddressingMode, time: usize) -> usize {
+    pub fn tax(cpu: &mut CPU, memory: &mut MainMemory, mode: &AddressingMode, time: usize) -> usize {
         
         let (_, _) = match *mode {
             AddressingMode::Implied =>
@@ -1446,7 +1451,7 @@ pub mod instruction_func {
         time
     }
 
-    pub fn tay(cpu: &mut CPU, memory: &MainMemory, mode: &AddressingMode, time: usize) -> usize {
+    pub fn tay(cpu: &mut CPU, memory: &mut MainMemory, mode: &AddressingMode, time: usize) -> usize {
         
         let (_, _) = match *mode {
             AddressingMode::Implied =>
@@ -1461,7 +1466,7 @@ pub mod instruction_func {
         time
     }
 
-    pub fn tsx(cpu: &mut CPU, memory: &MainMemory, mode: &AddressingMode, time: usize) -> usize {
+    pub fn tsx(cpu: &mut CPU, memory: &mut MainMemory, mode: &AddressingMode, time: usize) -> usize {
         
         let (_, _) = match *mode {
             AddressingMode::Implied =>
@@ -1476,7 +1481,7 @@ pub mod instruction_func {
         time
     }
 
-    pub fn txa(cpu: &mut CPU, memory: &MainMemory, mode: &AddressingMode, time: usize) -> usize {
+    pub fn txa(cpu: &mut CPU, memory: &mut MainMemory, mode: &AddressingMode, time: usize) -> usize {
         
         let (_, _) = match *mode {
             AddressingMode::Implied =>
@@ -1491,7 +1496,7 @@ pub mod instruction_func {
         time
     }
 
-    pub fn txs(cpu: &mut CPU, memory: &MainMemory, mode: &AddressingMode, time: usize) -> usize {
+    pub fn txs(cpu: &mut CPU, memory: &mut MainMemory, mode: &AddressingMode, time: usize) -> usize {
         
         let (_, _) = match *mode {
             AddressingMode::Implied =>
@@ -1504,7 +1509,7 @@ pub mod instruction_func {
         time
     }
 
-    pub fn tya(cpu: &mut CPU, memory: &MainMemory, mode: &AddressingMode, time: usize) -> usize {
+    pub fn tya(cpu: &mut CPU, memory: &mut MainMemory, mode: &AddressingMode, time: usize) -> usize {
         
         let (_, _) = match *mode {
             AddressingMode::Implied =>
@@ -1531,12 +1536,12 @@ mod tests {
     #[test]
     fn adc_imm_test_no_carry_no_overflow() {
         let (mut cpu, mut mem) = generate_cpu_and_mem();
-        mem.write(0, 0x69).unwrap();
-        mem.write(1, 0x20).unwrap();
+        mem.write(0, 0x69);
+        mem.write(1, 0x20);
         cpu.a = 0x24;
-        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut mem)).unwrap();
         if let Instruction::ADC(mode, time) = instr {
-            let cycles = instruction_func::adc(&mut cpu, &mem, mode, *time);
+            let cycles = instruction_func::adc(&mut cpu, &mut mem, mode, *time);
             assert_eq!(cpu.a, 0x44);
             assert_eq!(cycles, 2);
             assert_eq!(cpu.p.z, false);
@@ -1551,12 +1556,12 @@ mod tests {
     #[test]
     fn adc_imm_test_zero() {
         let (mut cpu, mut mem) = generate_cpu_and_mem();
-        mem.write(0, 0x69).unwrap();
-        mem.write(1, 0xFF).unwrap();
+        mem.write(0, 0x69);
+        mem.write(1, 0xFF);
         cpu.a = 0x01;
-        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut mem)).unwrap();
         if let Instruction::ADC(mode, time) = instr {
-            let cycles = instruction_func::adc(&mut cpu, &mem, mode, *time);
+            let cycles = instruction_func::adc(&mut cpu, &mut mem, mode, *time);
             assert_eq!(cpu.a, 0x00);
             assert_eq!(cycles, 2);
             assert_eq!(cpu.p.z, true);
@@ -1571,12 +1576,12 @@ mod tests {
     #[test]
     fn adc_imm_test_neg() {
         let (mut cpu, mut mem) = generate_cpu_and_mem();
-        mem.write(0, 0x69).unwrap();
-        mem.write(1, 0x01).unwrap();
+        mem.write(0, 0x69);
+        mem.write(1, 0x01);
         cpu.a = 0xFE;
-        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut mem)).unwrap();
         if let Instruction::ADC(mode, time) = instr {
-            let cycles = instruction_func::adc(&mut cpu, &mem, mode, *time); // will do 1 + -2
+            let cycles = instruction_func::adc(&mut cpu, &mut mem, mode, *time); // will do 1 + -2
             assert_eq!(cpu.a, 0xFF);
             assert_eq!(cycles, 2);
             assert_eq!(cpu.p.z, false);
@@ -1591,12 +1596,12 @@ mod tests {
     #[test]
     fn adc_imm_test_no_carry_overflow() {
         let (mut cpu, mut mem) = generate_cpu_and_mem();
-        mem.write(0, 0x69).unwrap();
-        mem.write(1, 0x50).unwrap();
+        mem.write(0, 0x69);
+        mem.write(1, 0x50);
         cpu.a = 0x50;
-        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut mem)).unwrap();
         if let Instruction::ADC(mode, time) = instr {
-            let cycles = instruction_func::adc(&mut cpu, &mem, mode, *time);
+            let cycles = instruction_func::adc(&mut cpu, &mut mem, mode, *time);
             assert_eq!(cpu.a, 0xA0);
             assert_eq!(cycles, 2);
             assert_eq!(cpu.p.z, false);
@@ -1611,12 +1616,12 @@ mod tests {
     #[test]
     fn adc_imm_test_carry_no_overflow() {
         let (mut cpu, mut mem) = generate_cpu_and_mem();
-        mem.write(0, 0x69).unwrap();
-        mem.write(1, 0x50).unwrap();
+        mem.write(0, 0x69);
+        mem.write(1, 0x50);
         cpu.a = 0xD0;
-        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut mem)).unwrap();
         if let Instruction::ADC(mode, time) = instr {
-            let cycles = instruction_func::adc(&mut cpu, &mem, mode, *time);
+            let cycles = instruction_func::adc(&mut cpu, &mut mem, mode, *time);
             assert_eq!(cpu.a, 0x20);
             assert_eq!(cycles, 2);
             assert_eq!(cpu.p.z, false);
@@ -1631,12 +1636,12 @@ mod tests {
     #[test]
     fn adc_imm_test_carry_overflow() {
         let (mut cpu, mut mem) = generate_cpu_and_mem();
-        mem.write(0, 0x69).unwrap();
-        mem.write(1, 0xD0).unwrap();
+        mem.write(0, 0x69);
+        mem.write(1, 0xD0);
         cpu.a = 0x90;
-        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut mem)).unwrap();
         if let Instruction::ADC(mode, time) = instr {
-            let cycles = instruction_func::adc(&mut cpu, &mem, mode, *time);
+            let cycles = instruction_func::adc(&mut cpu, &mut mem, mode, *time);
             assert_eq!(cpu.a, 0x60);
             assert_eq!(cycles, 2);
             assert_eq!(cpu.p.z, false);
@@ -1651,12 +1656,12 @@ mod tests {
     #[test]
     fn and_imm_test() {
         let (mut cpu, mut mem) = generate_cpu_and_mem();
-        mem.write(0, 0x29).unwrap();
-        mem.write(1, 0xF0).unwrap();
+        mem.write(0, 0x29);
+        mem.write(1, 0xF0);
         cpu.a = 0x1F;
-        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut mem)).unwrap();
         if let Instruction::AND(mode, time) = instr {
-            let cycles = instruction_func::and(&mut cpu, &mem, mode, *time);
+            let cycles = instruction_func::and(&mut cpu, &mut mem, mode, *time);
             assert_eq!(cpu.a, 0x10);
             assert_eq!(cycles, 2);
             assert_eq!(cpu.p.z, false);
@@ -1669,12 +1674,12 @@ mod tests {
     #[test]
     fn and_imm_zero_test() {
         let (mut cpu, mut mem) = generate_cpu_and_mem();
-        mem.write(0, 0x29).unwrap();
-        mem.write(1, 0xF0).unwrap();
+        mem.write(0, 0x29);
+        mem.write(1, 0xF0);
         cpu.a = 0x0F;
-        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut mem)).unwrap();
         if let Instruction::AND(mode, time) = instr {
-            let cycles = instruction_func::and(&mut cpu, &mem, mode, *time);
+            let cycles = instruction_func::and(&mut cpu, &mut mem, mode, *time);
             assert_eq!(cpu.a, 0x00);
             assert_eq!(cycles, 2);
             assert_eq!(cpu.p.z, true);
@@ -1687,12 +1692,12 @@ mod tests {
     #[test]
     fn and_imm_neg_test() {
         let (mut cpu, mut mem) = generate_cpu_and_mem();
-        mem.write(0, 0x29).unwrap();
-        mem.write(1, 0xF0).unwrap();
+        mem.write(0, 0x29);
+        mem.write(1, 0xF0);
         cpu.a = 0x8F;
-        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut mem)).unwrap();
         if let Instruction::AND(mode, time) = instr {
-            let cycles = instruction_func::and(&mut cpu, &mem, mode, *time);
+            let cycles = instruction_func::and(&mut cpu, &mut mem, mode, *time);
             assert_eq!(cpu.a, 0x80);
             assert_eq!(cycles, 2);
             assert_eq!(cpu.p.z, false);
@@ -1705,9 +1710,9 @@ mod tests {
     #[test]
     fn asl_acc_test() {
         let (mut cpu, mut mem) = generate_cpu_and_mem();
-        mem.write(0, 0x0A).unwrap();
+        mem.write(0, 0x0A);
         cpu.a = 0x01;
-        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut mem)).unwrap();
         if let Instruction::ASL(mode, time) = instr {
             let cycles = instruction_func::asl(&mut cpu, &mut mem, mode, *time);
             assert_eq!(cpu.a, 0x02);
@@ -1723,9 +1728,9 @@ mod tests {
     #[test]
     fn asl_acc_carry_and_zero_test() {
         let (mut cpu, mut mem) = generate_cpu_and_mem();
-        mem.write(0, 0x0A).unwrap();
+        mem.write(0, 0x0A);
         cpu.a = 0x80;
-        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut mem)).unwrap();
         if let Instruction::ASL(mode, time) = instr {
             let cycles = instruction_func::asl(&mut cpu, &mut mem, mode, *time);
             assert_eq!(cpu.a, 0x00);
@@ -1741,9 +1746,9 @@ mod tests {
     #[test]
     fn asl_acc_neg_test() {
         let (mut cpu, mut mem) = generate_cpu_and_mem();
-        mem.write(0, 0x0A).unwrap();
+        mem.write(0, 0x0A);
         cpu.a = 0x40;
-        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut mem)).unwrap();
         if let Instruction::ASL(mode, time) = instr {
             let cycles = instruction_func::asl(&mut cpu, &mut mem, mode, *time);
             assert_eq!(cpu.a, 0x80);
@@ -1759,11 +1764,11 @@ mod tests {
     #[test]
     fn asl_abs_test() {
         let (mut cpu, mut mem) = generate_cpu_and_mem();
-        mem.write(0, 0x0E).unwrap();
-        mem.write(1, 0x40).unwrap();
-        mem.write(2, 0x01).unwrap();
-        mem.write(0x0140, 0x01).unwrap();
-        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        mem.write(0, 0x0E);
+        mem.write(1, 0x40);
+        mem.write(2, 0x01);
+        mem.write(0x0140, 0x01);
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut mem)).unwrap();
         if let Instruction::ASL(mode, time) = instr {
             let cycles = instruction_func::asl(&mut cpu, &mut mem, mode, *time);
             assert_eq!(mem.read(0x0140), 0x02);
@@ -1780,9 +1785,9 @@ mod tests {
     fn bcc_no_branch_test() {
         let (mut cpu, mut mem) = generate_cpu_and_mem();
         cpu.p.c = true;
-        mem.write(0, 0x90).unwrap();
-        mem.write(1, 0x20).unwrap();
-        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        mem.write(0, 0x90);
+        mem.write(1, 0x20);
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut mem)).unwrap();
         if let Instruction::BCC(mode, time) = instr {
             let cycles = instruction_func::bcc(&mut cpu, &mut mem, mode, *time);
             assert_eq!(cycles, 2);
@@ -1795,9 +1800,9 @@ mod tests {
     #[test]
     fn bcc_pos_offset_same_page_test() {
         let (mut cpu, mut mem) = generate_cpu_and_mem();
-        mem.write(0, 0x90).unwrap();
-        mem.write(1, 0x20).unwrap();
-        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        mem.write(0, 0x90);
+        mem.write(1, 0x20);
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut mem)).unwrap();
         if let Instruction::BCC(mode, time) = instr {
             let cycles = instruction_func::bcc(&mut cpu, &mut mem, mode, *time);
             assert_eq!(cycles, 3);
@@ -1811,9 +1816,9 @@ mod tests {
     fn bcc_pos_offset_diff_page_test() {
         let (mut cpu, mut mem) = generate_cpu_and_mem();
         cpu.pc = 0xF0;
-        mem.write(0xF0, 0x90).unwrap();
-        mem.write(0xF1, 0x20).unwrap();
-        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        mem.write(0xF0, 0x90);
+        mem.write(0xF1, 0x20);
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut mem)).unwrap();
         if let Instruction::BCC(mode, time) = instr {
             let cycles = instruction_func::bcc(&mut cpu, &mut mem, mode, *time);
             assert_eq!(cycles, 4);
@@ -1827,9 +1832,9 @@ mod tests {
     fn bcc_neg_offset_same_page_test() {
         let (mut cpu, mut mem) = generate_cpu_and_mem();
         cpu.pc = 0x7F00;
-        mem.write(0x7F00, 0x90).unwrap();
-        mem.write(0x7F01, 0xFD).unwrap();
-        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        mem.write(0x7F00, 0x90);
+        mem.write(0x7F01, 0xFD);
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut mem)).unwrap();
         if let Instruction::BCC(mode, time) = instr {
             let cycles = instruction_func::bcc(&mut cpu, &mut mem, mode, *time);
             assert_eq!(cycles, 3);
@@ -1843,9 +1848,9 @@ mod tests {
     fn bcc_neg_offset_diff_page_test() {
         let (mut cpu, mut mem) = generate_cpu_and_mem();
         cpu.pc = 0x7FFD;
-        mem.write(0x7FFD, 0x90).unwrap();
-        mem.write(0x7FFE, 0xFF).unwrap();
-        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        mem.write(0x7FFD, 0x90);
+        mem.write(0x7FFE, 0xFF);
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut mem)).unwrap();
         if let Instruction::BCC(mode, time) = instr {
             let cycles = instruction_func::bcc(&mut cpu, &mut mem, mode, *time);
             assert_eq!(cycles, 4);
@@ -1859,9 +1864,9 @@ mod tests {
     fn bcs_no_branch_test() {
         let (mut cpu, mut mem) = generate_cpu_and_mem();
         cpu.p.c = false;
-        mem.write(0, 0xB0).unwrap();
-        mem.write(1, 0x20).unwrap();
-        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        mem.write(0, 0xB0);
+        mem.write(1, 0x20);
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut mem)).unwrap();
         if let Instruction::BCS(mode, time) = instr {
             let cycles = instruction_func::bcs(&mut cpu, &mut mem, mode, *time);
             assert_eq!(cycles, 2);
@@ -1875,9 +1880,9 @@ mod tests {
     fn bcs_pos_offset_same_page_test() {
         let (mut cpu, mut mem) = generate_cpu_and_mem();
         cpu.p.c = true;
-        mem.write(0, 0xB0).unwrap();
-        mem.write(1, 0x20).unwrap();
-        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        mem.write(0, 0xB0);
+        mem.write(1, 0x20);
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut mem)).unwrap();
         if let Instruction::BCS(mode, time) = instr {
             let cycles = instruction_func::bcs(&mut cpu, &mut mem, mode, *time);
             assert_eq!(cycles, 3);
@@ -1892,9 +1897,9 @@ mod tests {
         let (mut cpu, mut mem) = generate_cpu_and_mem();
         cpu.p.c = true;
         cpu.pc = 0xF0;
-        mem.write(0xF0, 0xB0).unwrap();
-        mem.write(0xF1, 0x20).unwrap();
-        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        mem.write(0xF0, 0xB0);
+        mem.write(0xF1, 0x20);
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut mem)).unwrap();
         if let Instruction::BCS(mode, time) = instr {
             let cycles = instruction_func::bcs(&mut cpu, &mut mem, mode, *time);
             assert_eq!(cycles, 4);
@@ -1909,9 +1914,9 @@ mod tests {
         let (mut cpu, mut mem) = generate_cpu_and_mem();
         cpu.p.c = true;
         cpu.pc = 0x7F00;
-        mem.write(0x7F00, 0xB0).unwrap();
-        mem.write(0x7F01, 0xFD).unwrap();
-        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        mem.write(0x7F00, 0xB0);
+        mem.write(0x7F01, 0xFD);
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut mem)).unwrap();
         if let Instruction::BCS(mode, time) = instr {
             let cycles = instruction_func::bcs(&mut cpu, &mut mem, mode, *time);
             assert_eq!(cycles, 3);
@@ -1926,9 +1931,9 @@ mod tests {
         let (mut cpu, mut mem) = generate_cpu_and_mem();
         cpu.p.c = true;
         cpu.pc = 0x7FFD;
-        mem.write(0x7FFD, 0xB0).unwrap();
-        mem.write(0x7FFE, 0xFF).unwrap();
-        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        mem.write(0x7FFD, 0xB0);
+        mem.write(0x7FFE, 0xFF);
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut mem)).unwrap();
         if let Instruction::BCS(mode, time) = instr {
             let cycles = instruction_func::bcs(&mut cpu, &mut mem, mode, *time);
             assert_eq!(cycles, 4);
@@ -1942,9 +1947,9 @@ mod tests {
     fn beq_no_branch_test() {
         let (mut cpu, mut mem) = generate_cpu_and_mem();
         cpu.p.z = false;
-        mem.write(0, 0xF0).unwrap();
-        mem.write(1, 0x20).unwrap();
-        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        mem.write(0, 0xF0);
+        mem.write(1, 0x20);
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut mem)).unwrap();
         if let Instruction::BEQ(mode, time) = instr {
             let cycles = instruction_func::beq(&mut cpu, &mut mem, mode, *time);
             assert_eq!(cycles, 2);
@@ -1958,9 +1963,9 @@ mod tests {
     fn beq_pos_offset_same_page_test() {
         let (mut cpu, mut mem) = generate_cpu_and_mem();
         cpu.p.z = true;
-        mem.write(0, 0xF0).unwrap();
-        mem.write(1, 0x20).unwrap();
-        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        mem.write(0, 0xF0);
+        mem.write(1, 0x20);
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut mem)).unwrap();
         if let Instruction::BEQ(mode, time) = instr {
             let cycles = instruction_func::beq(&mut cpu, &mut mem, mode, *time);
             assert_eq!(cycles, 3);
@@ -1975,9 +1980,9 @@ mod tests {
         let (mut cpu, mut mem) = generate_cpu_and_mem();
         cpu.p.z = true;
         cpu.pc = 0xF0;
-        mem.write(0xF0, 0xF0).unwrap();
-        mem.write(0xF1, 0x20).unwrap();
-        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        mem.write(0xF0, 0xF0);
+        mem.write(0xF1, 0x20);
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut mem)).unwrap();
         if let Instruction::BEQ(mode, time) = instr {
             let cycles = instruction_func::beq(&mut cpu, &mut mem, mode, *time);
             assert_eq!(cycles, 4);
@@ -1992,9 +1997,9 @@ mod tests {
         let (mut cpu, mut mem) = generate_cpu_and_mem();
         cpu.p.z = true;
         cpu.pc = 0x7F00;
-        mem.write(0x7F00, 0xF0).unwrap();
-        mem.write(0x7F01, 0xFD).unwrap();
-        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        mem.write(0x7F00, 0xF0);
+        mem.write(0x7F01, 0xFD);
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut mem)).unwrap();
         if let Instruction::BEQ(mode, time) = instr {
             let cycles = instruction_func::beq(&mut cpu, &mut mem, mode, *time);
             assert_eq!(cycles, 3);
@@ -2009,9 +2014,9 @@ mod tests {
         let (mut cpu, mut mem) = generate_cpu_and_mem();
         cpu.p.z = true;
         cpu.pc = 0x7FFD;
-        mem.write(0x7FFD, 0xF0).unwrap();
-        mem.write(0x7FFE, 0xFF).unwrap();
-        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        mem.write(0x7FFD, 0xF0);
+        mem.write(0x7FFE, 0xFF);
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut mem)).unwrap();
         if let Instruction::BEQ(mode, time) = instr {
             let cycles = instruction_func::beq(&mut cpu, &mut mem, mode, *time);
             assert_eq!(cycles, 4);
@@ -2025,9 +2030,9 @@ mod tests {
     fn bne_no_branch_test() {
         let (mut cpu, mut mem) = generate_cpu_and_mem();
         cpu.p.z = true;
-        mem.write(0, 0xD0).unwrap();
-        mem.write(1, 0x20).unwrap();
-        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        mem.write(0, 0xD0);
+        mem.write(1, 0x20);
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut mem)).unwrap();
         if let Instruction::BNE(mode, time) = instr {
             let cycles = instruction_func::bne(&mut cpu, &mut mem, mode, *time);
             assert_eq!(cycles, 2);
@@ -2041,9 +2046,9 @@ mod tests {
     fn bne_pos_offset_same_page_test() {
         let (mut cpu, mut mem) = generate_cpu_and_mem();
         cpu.p.z = false;
-        mem.write(0, 0xD0).unwrap();
-        mem.write(1, 0x20).unwrap();
-        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        mem.write(0, 0xD0);
+        mem.write(1, 0x20);
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut mem)).unwrap();
         if let Instruction::BNE(mode, time) = instr {
             let cycles = instruction_func::bne(&mut cpu, &mut mem, mode, *time);
             assert_eq!(cycles, 3);
@@ -2058,9 +2063,9 @@ mod tests {
         let (mut cpu, mut mem) = generate_cpu_and_mem();
         cpu.p.z = false;
         cpu.pc = 0xF0;
-        mem.write(0xF0, 0xD0).unwrap();
-        mem.write(0xF1, 0x20).unwrap();
-        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        mem.write(0xF0, 0xD0);
+        mem.write(0xF1, 0x20);
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut mem)).unwrap();
         if let Instruction::BNE(mode, time) = instr {
             let cycles = instruction_func::bne(&mut cpu, &mut mem, mode, *time);
             assert_eq!(cycles, 4);
@@ -2075,9 +2080,9 @@ mod tests {
         let (mut cpu, mut mem) = generate_cpu_and_mem();
         cpu.p.z = false;
         cpu.pc = 0x7F00;
-        mem.write(0x7F00, 0xD0).unwrap();
-        mem.write(0x7F01, 0xFD).unwrap();
-        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        mem.write(0x7F00, 0xD0);
+        mem.write(0x7F01, 0xFD);
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut mem)).unwrap();
         if let Instruction::BNE(mode, time) = instr {
             let cycles = instruction_func::bne(&mut cpu, &mut mem, mode, *time);
             assert_eq!(cycles, 3);
@@ -2092,9 +2097,9 @@ mod tests {
         let (mut cpu, mut mem) = generate_cpu_and_mem();
         cpu.p.z = false;
         cpu.pc = 0x7FFD;
-        mem.write(0x7FFD, 0xD0).unwrap();
-        mem.write(0x7FFE, 0xFF).unwrap();
-        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        mem.write(0x7FFD, 0xD0);
+        mem.write(0x7FFE, 0xFF);
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut mem)).unwrap();
         if let Instruction::BNE(mode, time) = instr {
             let cycles = instruction_func::bne(&mut cpu, &mut mem, mode, *time);
             assert_eq!(cycles, 4);
@@ -2108,9 +2113,9 @@ mod tests {
     fn bmi_no_branch_test() {
         let (mut cpu, mut mem) = generate_cpu_and_mem();
         cpu.p.n = false;
-        mem.write(0, 0x30).unwrap();
-        mem.write(1, 0x20).unwrap();
-        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        mem.write(0, 0x30);
+        mem.write(1, 0x20);
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut mem)).unwrap();
         if let Instruction::BMI(mode, time) = instr {
             let cycles = instruction_func::bmi(&mut cpu, &mut mem, mode, *time);
             assert_eq!(cycles, 2);
@@ -2124,9 +2129,9 @@ mod tests {
     fn bmi_pos_offset_same_page_test() {
         let (mut cpu, mut mem) = generate_cpu_and_mem();
         cpu.p.n = true;
-        mem.write(0, 0x30).unwrap();
-        mem.write(1, 0x20).unwrap();
-        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        mem.write(0, 0x30);
+        mem.write(1, 0x20);
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut mem)).unwrap();
         if let Instruction::BMI(mode, time) = instr {
             let cycles = instruction_func::bmi(&mut cpu, &mut mem, mode, *time);
             assert_eq!(cycles, 3);
@@ -2141,9 +2146,9 @@ mod tests {
         let (mut cpu, mut mem) = generate_cpu_and_mem();
         cpu.p.n = true;
         cpu.pc = 0xF0;
-        mem.write(0xF0, 0x30).unwrap();
-        mem.write(0xF1, 0x20).unwrap();
-        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        mem.write(0xF0, 0x30);
+        mem.write(0xF1, 0x20);
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut mem)).unwrap();
         if let Instruction::BMI(mode, time) = instr {
             let cycles = instruction_func::bmi(&mut cpu, &mut mem, mode, *time);
             assert_eq!(cycles, 4);
@@ -2158,9 +2163,9 @@ mod tests {
         let (mut cpu, mut mem) = generate_cpu_and_mem();
         cpu.p.n = true;
         cpu.pc = 0x7F00;
-        mem.write(0x7F00, 0x30).unwrap();
-        mem.write(0x7F01, 0xFD).unwrap();
-        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        mem.write(0x7F00, 0x30);
+        mem.write(0x7F01, 0xFD);
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut mem)).unwrap();
         if let Instruction::BMI(mode, time) = instr {
             let cycles = instruction_func::bmi(&mut cpu, &mut mem, mode, *time);
             assert_eq!(cycles, 3);
@@ -2175,9 +2180,9 @@ mod tests {
         let (mut cpu, mut mem) = generate_cpu_and_mem();
         cpu.p.n = true;
         cpu.pc = 0x7FFD;
-        mem.write(0x7FFD, 0x30).unwrap();
-        mem.write(0x7FFE, 0xFF).unwrap();
-        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        mem.write(0x7FFD, 0x30);
+        mem.write(0x7FFE, 0xFF);
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut mem)).unwrap();
         if let Instruction::BMI(mode, time) = instr {
             let cycles = instruction_func::bmi(&mut cpu, &mut mem, mode, *time);
             assert_eq!(cycles, 4);
@@ -2191,9 +2196,9 @@ mod tests {
     fn bpl_no_branch_test() {
         let (mut cpu, mut mem) = generate_cpu_and_mem();
         cpu.p.n = true;
-        mem.write(0, 0x10).unwrap();
-        mem.write(1, 0x20).unwrap();
-        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        mem.write(0, 0x10);
+        mem.write(1, 0x20);
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut mem)).unwrap();
         if let Instruction::BPL(mode, time) = instr {
             let cycles = instruction_func::bpl(&mut cpu, &mut mem, mode, *time);
             assert_eq!(cycles, 2);
@@ -2207,9 +2212,9 @@ mod tests {
     fn bpl_pos_offset_same_page_test() {
         let (mut cpu, mut mem) = generate_cpu_and_mem();
         cpu.p.n = false;
-        mem.write(0, 0x10).unwrap();
-        mem.write(1, 0x20).unwrap();
-        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        mem.write(0, 0x10);
+        mem.write(1, 0x20);
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut mem)).unwrap();
         if let Instruction::BPL(mode, time) = instr {
             let cycles = instruction_func::bpl(&mut cpu, &mut mem, mode, *time);
             assert_eq!(cycles, 3);
@@ -2224,9 +2229,9 @@ mod tests {
         let (mut cpu, mut mem) = generate_cpu_and_mem();
         cpu.p.n = false;
         cpu.pc = 0xF0;
-        mem.write(0xF0, 0x10).unwrap();
-        mem.write(0xF1, 0x20).unwrap();
-        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        mem.write(0xF0, 0x10);
+        mem.write(0xF1, 0x20);
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut mem)).unwrap();
         if let Instruction::BPL(mode, time) = instr {
             let cycles = instruction_func::bpl(&mut cpu, &mut mem, mode, *time);
             assert_eq!(cycles, 4);
@@ -2241,9 +2246,9 @@ mod tests {
         let (mut cpu, mut mem) = generate_cpu_and_mem();
         cpu.p.n = false;
         cpu.pc = 0x7F00;
-        mem.write(0x7F00, 0x10).unwrap();
-        mem.write(0x7F01, 0xFD).unwrap();
-        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        mem.write(0x7F00, 0x10);
+        mem.write(0x7F01, 0xFD);
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut mem)).unwrap();
         if let Instruction::BPL(mode, time) = instr {
             let cycles = instruction_func::bpl(&mut cpu, &mut mem, mode, *time);
             assert_eq!(cycles, 3);
@@ -2258,9 +2263,9 @@ mod tests {
         let (mut cpu, mut mem) = generate_cpu_and_mem();
         cpu.p.n = false;
         cpu.pc = 0x7FFD;
-        mem.write(0x7FFD, 0x10).unwrap();
-        mem.write(0x7FFE, 0xFF).unwrap();
-        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        mem.write(0x7FFD, 0x10);
+        mem.write(0x7FFE, 0xFF);
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut mem)).unwrap();
         if let Instruction::BPL(mode, time) = instr {
             let cycles = instruction_func::bpl(&mut cpu, &mut mem, mode, *time);
             assert_eq!(cycles, 4);
@@ -2274,9 +2279,9 @@ mod tests {
     fn bvc_no_branch_test() {
         let (mut cpu, mut mem) = generate_cpu_and_mem();
         cpu.p.v = true;
-        mem.write(0, 0x50).unwrap();
-        mem.write(1, 0x20).unwrap();
-        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        mem.write(0, 0x50);
+        mem.write(1, 0x20);
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut mem)).unwrap();
         if let Instruction::BVC(mode, time) = instr {
             let cycles = instruction_func::bvc(&mut cpu, &mut mem, mode, *time);
             assert_eq!(cycles, 2);
@@ -2290,9 +2295,9 @@ mod tests {
     fn bvc_pos_offset_same_page_test() {
         let (mut cpu, mut mem) = generate_cpu_and_mem();
         cpu.p.v = false;
-        mem.write(0, 0x50).unwrap();
-        mem.write(1, 0x20).unwrap();
-        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        mem.write(0, 0x50);
+        mem.write(1, 0x20);
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut mem)).unwrap();
         if let Instruction::BVC(mode, time) = instr {
             let cycles = instruction_func::bvc(&mut cpu, &mut mem, mode, *time);
             assert_eq!(cycles, 3);
@@ -2307,9 +2312,9 @@ mod tests {
         let (mut cpu, mut mem) = generate_cpu_and_mem();
         cpu.p.v = false;
         cpu.pc = 0xF0;
-        mem.write(0xF0, 0x50).unwrap();
-        mem.write(0xF1, 0x20).unwrap();
-        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        mem.write(0xF0, 0x50);
+        mem.write(0xF1, 0x20);
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut mem)).unwrap();
         if let Instruction::BVC(mode, time) = instr {
             let cycles = instruction_func::bvc(&mut cpu, &mut mem, mode, *time);
             assert_eq!(cycles, 4);
@@ -2324,9 +2329,9 @@ mod tests {
         let (mut cpu, mut mem) = generate_cpu_and_mem();
         cpu.p.v = false;
         cpu.pc = 0x7F00;
-        mem.write(0x7F00, 0x50).unwrap();
-        mem.write(0x7F01, 0xFD).unwrap();
-        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        mem.write(0x7F00, 0x50);
+        mem.write(0x7F01, 0xFD);
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut mem)).unwrap();
         if let Instruction::BVC(mode, time) = instr {
             let cycles = instruction_func::bvc(&mut cpu, &mut mem, mode, *time);
             assert_eq!(cycles, 3);
@@ -2341,9 +2346,9 @@ mod tests {
         let (mut cpu, mut mem) = generate_cpu_and_mem();
         cpu.p.v = false;
         cpu.pc = 0x7FFD;
-        mem.write(0x7FFD, 0x50).unwrap();
-        mem.write(0x7FFE, 0xFF).unwrap();
-        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        mem.write(0x7FFD, 0x50);
+        mem.write(0x7FFE, 0xFF);
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut mem)).unwrap();
         if let Instruction::BVC(mode, time) = instr {
             let cycles = instruction_func::bvc(&mut cpu, &mut mem, mode, *time);
             assert_eq!(cycles, 4);
@@ -2357,9 +2362,9 @@ mod tests {
     fn bvs_no_branch_test() {
         let (mut cpu, mut mem) = generate_cpu_and_mem();
         cpu.p.v = false;
-        mem.write(0, 0x70).unwrap();
-        mem.write(1, 0x20).unwrap();
-        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        mem.write(0, 0x70);
+        mem.write(1, 0x20);
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut mem)).unwrap();
         if let Instruction::BVS(mode, time) = instr {
             let cycles = instruction_func::bvs(&mut cpu, &mut mem, mode, *time);
             assert_eq!(cycles, 2);
@@ -2373,9 +2378,9 @@ mod tests {
     fn bvs_pos_offset_same_page_test() {
         let (mut cpu, mut mem) = generate_cpu_and_mem();
         cpu.p.v = true;
-        mem.write(0, 0x70).unwrap();
-        mem.write(1, 0x20).unwrap();
-        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        mem.write(0, 0x70);
+        mem.write(1, 0x20);
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut mem)).unwrap();
         if let Instruction::BVS(mode, time) = instr {
             let cycles = instruction_func::bvs(&mut cpu, &mut mem, mode, *time);
             assert_eq!(cycles, 3);
@@ -2390,9 +2395,9 @@ mod tests {
         let (mut cpu, mut mem) = generate_cpu_and_mem();
         cpu.p.v = true;
         cpu.pc = 0xF0;
-        mem.write(0xF0, 0x70).unwrap();
-        mem.write(0xF1, 0x20).unwrap();
-        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        mem.write(0xF0, 0x70);
+        mem.write(0xF1, 0x20);
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut mem)).unwrap();
         if let Instruction::BVS(mode, time) = instr {
             let cycles = instruction_func::bvs(&mut cpu, &mut mem, mode, *time);
             assert_eq!(cycles, 4);
@@ -2407,9 +2412,9 @@ mod tests {
         let (mut cpu, mut mem) = generate_cpu_and_mem();
         cpu.p.v = true;
         cpu.pc = 0x7F00;
-        mem.write(0x7F00, 0x70).unwrap();
-        mem.write(0x7F01, 0xFD).unwrap();
-        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        mem.write(0x7F00, 0x70);
+        mem.write(0x7F01, 0xFD);
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut mem)).unwrap();
         if let Instruction::BVS(mode, time) = instr {
             let cycles = instruction_func::bvs(&mut cpu, &mut mem, mode, *time);
             assert_eq!(cycles, 3);
@@ -2424,9 +2429,9 @@ mod tests {
         let (mut cpu, mut mem) = generate_cpu_and_mem();
         cpu.p.v = true;
         cpu.pc = 0x7FFD;
-        mem.write(0x7FFD, 0x70).unwrap();
-        mem.write(0x7FFE, 0xFF).unwrap();
-        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        mem.write(0x7FFD, 0x70);
+        mem.write(0x7FFE, 0xFF);
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut mem)).unwrap();
         if let Instruction::BVS(mode, time) = instr {
             let cycles = instruction_func::bvs(&mut cpu, &mut mem, mode, *time);
             assert_eq!(cycles, 4);
@@ -2439,11 +2444,11 @@ mod tests {
     #[test]
     fn bit_test() {
         let (mut cpu, mut mem) = generate_cpu_and_mem();
-        mem.write(0, 0x24).unwrap();
-        mem.write(1, 0x40).unwrap();
-        mem.write(0x0040, 0xE1).unwrap();
+        mem.write(0, 0x24);
+        mem.write(1, 0x40);
+        mem.write(0x0040, 0xE1);
         cpu.a = 2;
-        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut mem)).unwrap();
         if let Instruction::BIT(mode, time) = instr {
             let cycles = instruction_func::bit(&mut cpu, &mut mem, mode, *time);
             assert_eq!(cycles, 3);
@@ -2462,7 +2467,7 @@ mod tests {
         cpu.pc = 0x1234; // M[0x1234] = 0 => Break
         cpu.sp = 0xFF;
         cpu.p.n = true;
-        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut mem)).unwrap();
         if let Instruction::BRK(mode, time) = instr {
             let cycles = instruction_func::brk(&mut cpu, &mut mem, mode, *time);
             assert_eq!(cycles, 7);
@@ -2481,12 +2486,12 @@ mod tests {
     #[test]
     fn cmp_imm_test() {
         let (mut cpu, mut mem) = generate_cpu_and_mem();
-        mem.write(0, 0xC9).unwrap();
-        mem.write(1, 0x02).unwrap();
+        mem.write(0, 0xC9);
+        mem.write(1, 0x02);
         cpu.a = 0x03;
-        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut mem)).unwrap();
         if let Instruction::CMP(mode, time) = instr {
-            let cycles = instruction_func::cmp(&mut cpu, &mem, mode, *time);
+            let cycles = instruction_func::cmp(&mut cpu, &mut mem, mode, *time);
             assert_eq!(cycles, 2);
             assert_eq!(cpu.p.z, false);
             assert_eq!(cpu.p.n, false);
@@ -2499,12 +2504,12 @@ mod tests {
     #[test]
     fn cmp_imm_carry_test() {
         let (mut cpu, mut mem) = generate_cpu_and_mem();
-        mem.write(0, 0xC9).unwrap();
-        mem.write(1, 0x03).unwrap();
+        mem.write(0, 0xC9);
+        mem.write(1, 0x03);
         cpu.a = 0x04;
-        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut mem)).unwrap();
         if let Instruction::CMP(mode, time) = instr {
-            let cycles = instruction_func::cmp(&mut cpu, &mem, mode, *time);
+            let cycles = instruction_func::cmp(&mut cpu, &mut mem, mode, *time);
             assert_eq!(cycles, 2);
             assert_eq!(cpu.p.z, false);
             assert_eq!(cpu.p.n, false);
@@ -2517,12 +2522,12 @@ mod tests {
     #[test]
     fn cmp_imm_zero_test() {
         let (mut cpu, mut mem) = generate_cpu_and_mem();
-        mem.write(0, 0xC9).unwrap();
-        mem.write(1, 0x03).unwrap();
+        mem.write(0, 0xC9);
+        mem.write(1, 0x03);
         cpu.a = 0x03;
-        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut mem)).unwrap();
         if let Instruction::CMP(mode, time) = instr {
-            let cycles = instruction_func::cmp(&mut cpu, &mem, mode, *time);
+            let cycles = instruction_func::cmp(&mut cpu, &mut mem, mode, *time);
             assert_eq!(cycles, 2);
             assert_eq!(cpu.p.z, true);
             assert_eq!(cpu.p.n, false);
@@ -2535,12 +2540,12 @@ mod tests {
     #[test]
     fn cmp_imm_neg_test() {
         let (mut cpu, mut mem) = generate_cpu_and_mem();
-        mem.write(0, 0xC9).unwrap();
-        mem.write(1, 0x03).unwrap();
+        mem.write(0, 0xC9);
+        mem.write(1, 0x03);
         cpu.a = 0x02;
-        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut mem)).unwrap();
         if let Instruction::CMP(mode, time) = instr {
-            let cycles = instruction_func::cmp(&mut cpu, &mem, mode, *time);
+            let cycles = instruction_func::cmp(&mut cpu, &mut mem, mode, *time);
             assert_eq!(cycles, 2);
             assert_eq!(cpu.p.z, false);
             assert_eq!(cpu.p.n, true);
@@ -2553,12 +2558,12 @@ mod tests {
     #[test]
     fn cpx_imm_test() {
         let (mut cpu, mut mem) = generate_cpu_and_mem();
-        mem.write(0, 0xE0).unwrap();
-        mem.write(1, 0x02).unwrap();
+        mem.write(0, 0xE0);
+        mem.write(1, 0x02);
         cpu.x = 0x03;
-        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut mem)).unwrap();
         if let Instruction::CPX(mode, time) = instr {
-            let cycles = instruction_func::cpx(&mut cpu, &mem, mode, *time);
+            let cycles = instruction_func::cpx(&mut cpu, &mut mem, mode, *time);
             assert_eq!(cycles, 2);
             assert_eq!(cpu.p.z, false);
             assert_eq!(cpu.p.n, false);
@@ -2571,12 +2576,12 @@ mod tests {
     #[test]
     fn cpx_imm_carry_test() {
         let (mut cpu, mut mem) = generate_cpu_and_mem();
-        mem.write(0, 0xE0).unwrap();
-        mem.write(1, 0x03).unwrap();
+        mem.write(0, 0xE0);
+        mem.write(1, 0x03);
         cpu.x = 0x04;
-        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut mem)).unwrap();
         if let Instruction::CPX(mode, time) = instr {
-            let cycles = instruction_func::cpx(&mut cpu, &mem, mode, *time);
+            let cycles = instruction_func::cpx(&mut cpu, &mut mem, mode, *time);
             assert_eq!(cycles, 2);
             assert_eq!(cpu.p.z, false);
             assert_eq!(cpu.p.n, false);
@@ -2589,12 +2594,12 @@ mod tests {
     #[test]
     fn cpx_imm_zero_test() {
         let (mut cpu, mut mem) = generate_cpu_and_mem();
-        mem.write(0, 0xE0).unwrap();
-        mem.write(1, 0x03).unwrap();
+        mem.write(0, 0xE0);
+        mem.write(1, 0x03);
         cpu.x = 0x03;
-        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut mem)).unwrap();
         if let Instruction::CPX(mode, time) = instr {
-            let cycles = instruction_func::cpx(&mut cpu, &mem, mode, *time);
+            let cycles = instruction_func::cpx(&mut cpu, &mut mem, mode, *time);
             assert_eq!(cycles, 2);
             assert_eq!(cpu.p.z, true);
             assert_eq!(cpu.p.n, false);
@@ -2607,12 +2612,12 @@ mod tests {
     #[test]
     fn cpx_imm_neg_test() {
         let (mut cpu, mut mem) = generate_cpu_and_mem();
-        mem.write(0, 0xE0).unwrap();
-        mem.write(1, 0x03).unwrap();
+        mem.write(0, 0xE0);
+        mem.write(1, 0x03);
         cpu.x = 0x02;
-        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut mem)).unwrap();
         if let Instruction::CPX(mode, time) = instr {
-            let cycles = instruction_func::cpx(&mut cpu, &mem, mode, *time);
+            let cycles = instruction_func::cpx(&mut cpu, &mut mem, mode, *time);
             assert_eq!(cycles, 2);
             assert_eq!(cpu.p.z, false);
             assert_eq!(cpu.p.n, true);
@@ -2625,12 +2630,12 @@ mod tests {
     #[test]
     fn cpy_imm_test() {
         let (mut cpu, mut mem) = generate_cpu_and_mem();
-        mem.write(0, 0xC0).unwrap();
-        mem.write(1, 0x02).unwrap();
+        mem.write(0, 0xC0);
+        mem.write(1, 0x02);
         cpu.y = 0x03;
-        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut mem)).unwrap();
         if let Instruction::CPY(mode, time) = instr {
-            let cycles = instruction_func::cpy(&mut cpu, &mem, mode, *time);
+            let cycles = instruction_func::cpy(&mut cpu, &mut mem, mode, *time);
             assert_eq!(cycles, 2);
             assert_eq!(cpu.p.z, false);
             assert_eq!(cpu.p.n, false);
@@ -2643,12 +2648,12 @@ mod tests {
     #[test]
     fn cpy_imm_carry_test() {
         let (mut cpu, mut mem) = generate_cpu_and_mem();
-        mem.write(0, 0xC0).unwrap();
-        mem.write(1, 0x03).unwrap();
+        mem.write(0, 0xC0);
+        mem.write(1, 0x03);
         cpu.y = 0x04;
-        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut mem)).unwrap();
         if let Instruction::CPY(mode, time) = instr {
-            let cycles = instruction_func::cpy(&mut cpu, &mem, mode, *time);
+            let cycles = instruction_func::cpy(&mut cpu, &mut mem, mode, *time);
             assert_eq!(cycles, 2);
             assert_eq!(cpu.p.z, false);
             assert_eq!(cpu.p.n, false);
@@ -2661,12 +2666,12 @@ mod tests {
     #[test]
     fn cpy_imm_zero_test() {
         let (mut cpu, mut mem) = generate_cpu_and_mem();
-        mem.write(0, 0xC0).unwrap();
-        mem.write(1, 0x03).unwrap();
+        mem.write(0, 0xC0);
+        mem.write(1, 0x03);
         cpu.y = 0x03;
-        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut mem)).unwrap();
         if let Instruction::CPY(mode, time) = instr {
-            let cycles = instruction_func::cpy(&mut cpu, &mem, mode, *time);
+            let cycles = instruction_func::cpy(&mut cpu, &mut mem, mode, *time);
             assert_eq!(cycles, 2);
             assert_eq!(cpu.p.z, true);
             assert_eq!(cpu.p.n, false);
@@ -2679,12 +2684,12 @@ mod tests {
     #[test]
     fn cpy_imm_neg_test() {
         let (mut cpu, mut mem) = generate_cpu_and_mem();
-        mem.write(0, 0xC0).unwrap();
-        mem.write(1, 0x03).unwrap();
+        mem.write(0, 0xC0);
+        mem.write(1, 0x03);
         cpu.y = 0x02;
-        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut mem)).unwrap();
         if let Instruction::CPY(mode, time) = instr {
-            let cycles = instruction_func::cpy(&mut cpu, &mem, mode, *time);
+            let cycles = instruction_func::cpy(&mut cpu, &mut mem, mode, *time);
             assert_eq!(cycles, 2);
             assert_eq!(cpu.p.z, false);
             assert_eq!(cpu.p.n, true);
@@ -2697,10 +2702,10 @@ mod tests {
     #[test]
     fn dec_zp_test() {
         let (mut cpu, mut mem) = generate_cpu_and_mem();
-        mem.write(0x00FF, 2).unwrap();
-        mem.write(0, 0xC6).unwrap();
-        mem.write(1, 0xFF).unwrap();
-        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        mem.write(0x00FF, 2);
+        mem.write(0, 0xC6);
+        mem.write(1, 0xFF);
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut mem)).unwrap();
         if let Instruction::DEC(mode, time) = instr {
             let cycles = instruction_func::dec(&mut cpu, &mut mem, mode, *time);
             assert_eq!(mem.read(0x00FF), 1);
@@ -2715,10 +2720,10 @@ mod tests {
     #[test]
     fn dec_zp_zero_test() {
         let (mut cpu, mut mem) = generate_cpu_and_mem();
-        mem.write(0x00FF, 1).unwrap();
-        mem.write(0, 0xC6).unwrap();
-        mem.write(1, 0xFF).unwrap();
-        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        mem.write(0x00FF, 1);
+        mem.write(0, 0xC6);
+        mem.write(1, 0xFF);
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut mem)).unwrap();
         if let Instruction::DEC(mode, time) = instr {
             let cycles = instruction_func::dec(&mut cpu, &mut mem, mode, *time);
             assert_eq!(mem.read(0x00FF), 0);
@@ -2733,10 +2738,10 @@ mod tests {
     #[test]
     fn dec_zp_neg_test() {
         let (mut cpu, mut mem) = generate_cpu_and_mem();
-        mem.write(0x00FF, 0x81).unwrap();
-        mem.write(0, 0xC6).unwrap();
-        mem.write(1, 0xFF).unwrap();
-        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        mem.write(0x00FF, 0x81);
+        mem.write(0, 0xC6);
+        mem.write(1, 0xFF);
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut mem)).unwrap();
         if let Instruction::DEC(mode, time) = instr {
             let cycles = instruction_func::dec(&mut cpu, &mut mem, mode, *time);
             assert_eq!(mem.read(0x00FF), 0x80);
@@ -2751,9 +2756,9 @@ mod tests {
     #[test]
     fn dex_zp_test() {
         let (mut cpu, mut mem) = generate_cpu_and_mem();
-        mem.write(0, 0xCA).unwrap();
+        mem.write(0, 0xCA);
         cpu.x = 2;
-        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut mem)).unwrap();
         if let Instruction::DEX(mode, time) = instr {
             let cycles = instruction_func::dex(&mut cpu, &mut mem, mode, *time);
             assert_eq!(cpu.x, 1);
@@ -2768,9 +2773,9 @@ mod tests {
     #[test]
     fn dex_zp_zero_test() {
         let (mut cpu, mut mem) = generate_cpu_and_mem();
-        mem.write(0, 0xCA).unwrap();
+        mem.write(0, 0xCA);
         cpu.x = 0x01;
-        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut mem)).unwrap();
         if let Instruction::DEX(mode, time) = instr {
             let cycles = instruction_func::dex(&mut cpu, &mut mem, mode, *time);
             assert_eq!(cpu.x, 0);
@@ -2785,9 +2790,9 @@ mod tests {
     #[test]
     fn dex_zp_neg_test() {
         let (mut cpu, mut mem) = generate_cpu_and_mem();
-        mem.write(0, 0xCA).unwrap();
+        mem.write(0, 0xCA);
         cpu.x = 0x81;
-        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut mem)).unwrap();
         if let Instruction::DEX(mode, time) = instr {
             let cycles = instruction_func::dex(&mut cpu, &mut mem, mode, *time);
             assert_eq!(cpu.x, 0x80);
@@ -2802,9 +2807,9 @@ mod tests {
     #[test]
     fn dey_zp_test() {
         let (mut cpu, mut mem) = generate_cpu_and_mem();
-        mem.write(0, 0x88).unwrap();
+        mem.write(0, 0x88);
         cpu.y = 2;
-        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut mem)).unwrap();
         if let Instruction::DEY(mode, time) = instr {
             let cycles = instruction_func::dey(&mut cpu, &mut mem, mode, *time);
             assert_eq!(cpu.y, 1);
@@ -2819,9 +2824,9 @@ mod tests {
     #[test]
     fn dey_zp_zero_test() {
         let (mut cpu, mut mem) = generate_cpu_and_mem();
-        mem.write(0, 0x88).unwrap();
+        mem.write(0, 0x88);
         cpu.y = 0x01;
-        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut mem)).unwrap();
         if let Instruction::DEY(mode, time) = instr {
             let cycles = instruction_func::dey(&mut cpu, &mut mem, mode, *time);
             assert_eq!(cpu.y, 0);
@@ -2836,9 +2841,9 @@ mod tests {
     #[test]
     fn dey_zp_neg_test() {
         let (mut cpu, mut mem) = generate_cpu_and_mem();
-        mem.write(0, 0x88).unwrap();
+        mem.write(0, 0x88);
         cpu.y = 0x81;
-        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut mem)).unwrap();
         if let Instruction::DEY(mode, time) = instr {
             let cycles = instruction_func::dey(&mut cpu, &mut mem, mode, *time);
             assert_eq!(cpu.y, 0x80);
@@ -2853,12 +2858,12 @@ mod tests {
     #[test]
     fn eor_imm_test() {
         let (mut cpu, mut mem) = generate_cpu_and_mem();
-        mem.write(0, 0x49).unwrap();
-        mem.write(1, 0xF0).unwrap();
+        mem.write(0, 0x49);
+        mem.write(1, 0xF0);
         cpu.a = 0x8F;
-        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut mem)).unwrap();
         if let Instruction::EOR(mode, time) = instr {
-            let cycles = instruction_func::eor(&mut cpu, &mem, mode, *time);
+            let cycles = instruction_func::eor(&mut cpu, &mut mem, mode, *time);
             assert_eq!(cpu.a, 0x7F);
             assert_eq!(cycles, 2);
             assert_eq!(cpu.p.z, false);
@@ -2871,12 +2876,12 @@ mod tests {
     #[test]
     fn eor_imm_zero_test() {
         let (mut cpu, mut mem) = generate_cpu_and_mem();
-        mem.write(0, 0x49).unwrap();
-        mem.write(1, 0xFF).unwrap();
+        mem.write(0, 0x49);
+        mem.write(1, 0xFF);
         cpu.a = 0xFF;
-        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut mem)).unwrap();
         if let Instruction::EOR(mode, time) = instr {
-            let cycles = instruction_func::eor(&mut cpu, &mem, mode, *time);
+            let cycles = instruction_func::eor(&mut cpu, &mut mem, mode, *time);
             assert_eq!(cpu.a, 0x00);
             assert_eq!(cycles, 2);
             assert_eq!(cpu.p.z, true);
@@ -2889,12 +2894,12 @@ mod tests {
     #[test]
     fn eor_imm_neg_test() {
         let (mut cpu, mut mem) = generate_cpu_and_mem();
-        mem.write(0, 0x49).unwrap();
-        mem.write(1, 0xF0).unwrap();
+        mem.write(0, 0x49);
+        mem.write(1, 0xF0);
         cpu.a = 0x0F;
-        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut mem)).unwrap();
         if let Instruction::EOR(mode, time) = instr {
-            let cycles = instruction_func::eor(&mut cpu, &mem, mode, *time);
+            let cycles = instruction_func::eor(&mut cpu, &mut mem, mode, *time);
             assert_eq!(cpu.a, 0xFF);
             assert_eq!(cycles, 2);
             assert_eq!(cpu.p.z, false);
@@ -2908,10 +2913,10 @@ mod tests {
 #[test]
     fn inc_zp_test() {
         let (mut cpu, mut mem) = generate_cpu_and_mem();
-        mem.write(0x00FF, 1).unwrap();
-        mem.write(0, 0xE6).unwrap();
-        mem.write(1, 0xFF).unwrap();
-        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        mem.write(0x00FF, 1);
+        mem.write(0, 0xE6);
+        mem.write(1, 0xFF);
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut mem)).unwrap();
         if let Instruction::INC(mode, time) = instr {
             let cycles = instruction_func::inc(&mut cpu, &mut mem, mode, *time);
             assert_eq!(mem.read(0x00FF), 2);
@@ -2926,10 +2931,10 @@ mod tests {
     #[test]
     fn inc_zp_zero_test() {
         let (mut cpu, mut mem) = generate_cpu_and_mem();
-        mem.write(0x00FF, 0xFF).unwrap();
-        mem.write(0, 0xE6).unwrap();
-        mem.write(1, 0xFF).unwrap();
-        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        mem.write(0x00FF, 0xFF);
+        mem.write(0, 0xE6);
+        mem.write(1, 0xFF);
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut mem)).unwrap();
         if let Instruction::INC(mode, time) = instr {
             let cycles = instruction_func::inc(&mut cpu, &mut mem, mode, *time);
             assert_eq!(mem.read(0x00FF), 0);
@@ -2944,10 +2949,10 @@ mod tests {
     #[test]
     fn inc_zp_neg_test() {
         let (mut cpu, mut mem) = generate_cpu_and_mem();
-        mem.write(0x00FF, 0x7F).unwrap();
-        mem.write(0, 0xE6).unwrap();
-        mem.write(1, 0xFF).unwrap();
-        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        mem.write(0x00FF, 0x7F);
+        mem.write(0, 0xE6);
+        mem.write(1, 0xFF);
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut mem)).unwrap();
         if let Instruction::INC(mode, time) = instr {
             let cycles = instruction_func::inc(&mut cpu, &mut mem, mode, *time);
             assert_eq!(mem.read(0x00FF), 0x80);
@@ -2962,9 +2967,9 @@ mod tests {
     #[test]
     fn inx_zp_test() {
         let (mut cpu, mut mem) = generate_cpu_and_mem();
-        mem.write(0, 0xE8).unwrap();
+        mem.write(0, 0xE8);
         cpu.x = 1;
-        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut mem)).unwrap();
         if let Instruction::INX(mode, time) = instr {
             let cycles = instruction_func::inx(&mut cpu, &mut mem, mode, *time);
             assert_eq!(cpu.x, 2);
@@ -2979,9 +2984,9 @@ mod tests {
     #[test]
     fn inx_zp_zero_test() {
         let (mut cpu, mut mem) = generate_cpu_and_mem();
-        mem.write(0, 0xE8).unwrap();
+        mem.write(0, 0xE8);
         cpu.x = 0xFF;
-        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut mem)).unwrap();
         if let Instruction::INX(mode, time) = instr {
             let cycles = instruction_func::inx(&mut cpu, &mut mem, mode, *time);
             assert_eq!(cpu.x, 0);
@@ -2996,9 +3001,9 @@ mod tests {
     #[test]
     fn inx_zp_neg_test() {
         let (mut cpu, mut mem) = generate_cpu_and_mem();
-        mem.write(0, 0xE8).unwrap();
+        mem.write(0, 0xE8);
         cpu.x = 0x7F;
-        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut mem)).unwrap();
         if let Instruction::INX(mode, time) = instr {
             let cycles = instruction_func::inx(&mut cpu, &mut mem, mode, *time);
             assert_eq!(cpu.x, 0x80);
@@ -3013,9 +3018,9 @@ mod tests {
     #[test]
     fn iny_zp_test() {
         let (mut cpu, mut mem) = generate_cpu_and_mem();
-        mem.write(0, 0xC8).unwrap();
+        mem.write(0, 0xC8);
         cpu.y = 1;
-        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut mem)).unwrap();
         if let Instruction::INY(mode, time) = instr {
             let cycles = instruction_func::iny(&mut cpu, &mut mem, mode, *time);
             assert_eq!(cpu.y, 2);
@@ -3030,12 +3035,12 @@ mod tests {
     #[test]
     fn jmp_abs_test() {
         let (mut cpu, mut mem) = generate_cpu_and_mem();
-        mem.write(0, 0x4C).unwrap();
-        mem.write(1, 0x40).unwrap();
-        mem.write(2, 0x01).unwrap();
-        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        mem.write(0, 0x4C);
+        mem.write(1, 0x40);
+        mem.write(2, 0x01);
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut mem)).unwrap();
         if let Instruction::JMP(mode, time) = instr {
-            let cycles = instruction_func::jmp(&mut cpu, &mem, mode, *time);
+            let cycles = instruction_func::jmp(&mut cpu, &mut mem, mode, *time);
             assert_eq!(cpu.pc, 0x0140);
             assert_eq!(cycles, 3);
         } else {
@@ -3046,14 +3051,14 @@ mod tests {
     #[test]
     fn jmp_ind_test() {
         let (mut cpu, mut mem) = generate_cpu_and_mem();
-        mem.write(0x03FE, 0x40).unwrap();
-        mem.write(0x03FF, 0x01).unwrap();
-        mem.write(0, 0x6C).unwrap();
-        mem.write(1, 0xFE).unwrap();
-        mem.write(2, 0x03).unwrap();
-        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        mem.write(0x03FE, 0x40);
+        mem.write(0x03FF, 0x01);
+        mem.write(0, 0x6C);
+        mem.write(1, 0xFE);
+        mem.write(2, 0x03);
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut mem)).unwrap();
         if let Instruction::JMP(mode, time) = instr {
-            let cycles = instruction_func::jmp(&mut cpu, &mem, mode, *time);
+            let cycles = instruction_func::jmp(&mut cpu, &mut mem, mode, *time);
             assert_eq!(cpu.pc, 0x0140);
             assert_eq!(cycles, 5);
         } else {
@@ -3064,9 +3069,9 @@ mod tests {
     #[test]
     fn iny_zp_zero_test() {
         let (mut cpu, mut mem) = generate_cpu_and_mem();
-        mem.write(0, 0xC8).unwrap();
+        mem.write(0, 0xC8);
         cpu.y = 0xFF;
-        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut mem)).unwrap();
         if let Instruction::INY(mode, time) = instr {
             let cycles = instruction_func::iny(&mut cpu, &mut mem, mode, *time);
             assert_eq!(cpu.y, 0);
@@ -3081,9 +3086,9 @@ mod tests {
     #[test]
     fn iny_zp_neg_test() {
         let (mut cpu, mut mem) = generate_cpu_and_mem();
-        mem.write(0, 0xC8).unwrap();
+        mem.write(0, 0xC8);
         cpu.y = 0x7F;
-        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut mem)).unwrap();
         if let Instruction::INY(mode, time) = instr {
             let cycles = instruction_func::iny(&mut cpu, &mut mem, mode, *time);
             assert_eq!(cpu.y, 0x80);
@@ -3099,12 +3104,12 @@ mod tests {
     fn jsr_test() {
         
         let (mut cpu, mut mem) = generate_cpu_and_mem();
-        mem.write(0x0240, 0x20).unwrap();
-        mem.write(0x0241, 0x40).unwrap();
-        mem.write(0x0242, 0x01).unwrap();
+        mem.write(0x0240, 0x20);
+        mem.write(0x0241, 0x40);
+        mem.write(0x0242, 0x01);
         cpu.pc = 0x0240;
         cpu.sp = 0xFF;
-        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut mem)).unwrap();
         if let Instruction::JSR(mode, time) = instr {
             let cycles = instruction_func::jsr(&mut cpu, &mut mem, mode, *time);
             assert_eq!(cpu.pc, 0x0140);
@@ -3119,11 +3124,11 @@ mod tests {
     #[test]
     fn ldx_imm_test() {
         let (mut cpu, mut mem) = generate_cpu_and_mem();
-        mem.write(0, 0xA2).unwrap();
-        mem.write(1, 0x44).unwrap();
-        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        mem.write(0, 0xA2);
+        mem.write(1, 0x44);
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut mem)).unwrap();
         if let Instruction::LDX(mode, time) = instr {
-            let cycles = instruction_func::ldx(&mut cpu, &mem, mode, *time);
+            let cycles = instruction_func::ldx(&mut cpu, &mut mem, mode, *time);
             assert_eq!(cpu.x, 0x44);
             assert_eq!(cycles, 2);
             assert_eq!(cpu.p.z, false);
@@ -3136,12 +3141,12 @@ mod tests {
     #[test]
     fn ldx_zp_test() {
         let (mut cpu, mut mem) = generate_cpu_and_mem();
-        mem.write(0x0040, 0x44).unwrap();  // M[0x0040] <- 0x4
-        mem.write(0, 0xA6).unwrap();
-        mem.write(1, 0x40).unwrap();
-        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        mem.write(0x0040, 0x44);  // M[0x0040] <- 0x4
+        mem.write(0, 0xA6);
+        mem.write(1, 0x40);
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut mem)).unwrap();
         if let Instruction::LDX(mode, time) = instr {
-            let cycles = instruction_func::ldx(&mut cpu, &mem, mode, *time);
+            let cycles = instruction_func::ldx(&mut cpu, &mut mem, mode, *time);
             assert_eq!(cpu.x, 0x44);
             assert_eq!(cycles, 3);
             assert_eq!(cpu.p.z, false);
@@ -3154,13 +3159,13 @@ mod tests {
     #[test]
     fn ldx_zpy_test() {
         let (mut cpu, mut mem) = generate_cpu_and_mem();
-        mem.write(0x0040, 0x44).unwrap();  // M[0x0040] <- 0x4
-        mem.write(0, 0xB6).unwrap();
-        mem.write(1, 0x3F).unwrap();
+        mem.write(0x0040, 0x44);  // M[0x0040] <- 0x4
+        mem.write(0, 0xB6);
+        mem.write(1, 0x3F);
         cpu.y = 1;
-        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut mem)).unwrap();
         if let Instruction::LDX(mode, time) = instr {
-            let cycles = instruction_func::ldx(&mut cpu, &mem, mode, *time);
+            let cycles = instruction_func::ldx(&mut cpu, &mut mem, mode, *time);
             assert_eq!(cpu.x, 0x44);
             assert_eq!(cycles, 4);
             assert_eq!(cpu.p.z, false);
@@ -3173,13 +3178,13 @@ mod tests {
     #[test]
     fn ldx_abs_test() {
         let (mut cpu, mut mem) = generate_cpu_and_mem();
-        mem.write(0x0140, 0x44).unwrap();
-        mem.write(0, 0xAE).unwrap();
-        mem.write(1, 0x40).unwrap();
-        mem.write(2, 0x01).unwrap();
-        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        mem.write(0x0140, 0x44);
+        mem.write(0, 0xAE);
+        mem.write(1, 0x40);
+        mem.write(2, 0x01);
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut mem)).unwrap();
         if let Instruction::LDX(mode, time) = instr {
-            let cycles = instruction_func::ldx(&mut cpu, &mem, mode, *time);
+            let cycles = instruction_func::ldx(&mut cpu, &mut mem, mode, *time);
             assert_eq!(cpu.x, 0x44);
             assert_eq!(cycles, 4);
             assert_eq!(cpu.p.z, false);
@@ -3192,14 +3197,14 @@ mod tests {
     #[test]
     fn ldx_absy_test_same_page() {
         let (mut cpu, mut mem) = generate_cpu_and_mem();
-        mem.write(0x0140, 0x44).unwrap();
-        mem.write(0, 0xBE).unwrap();
-        mem.write(1, 0x3F).unwrap();
-        mem.write(2, 0x01).unwrap();
+        mem.write(0x0140, 0x44);
+        mem.write(0, 0xBE);
+        mem.write(1, 0x3F);
+        mem.write(2, 0x01);
         cpu.y = 0x01;
-        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut mem)).unwrap();
         if let Instruction::LDX(mode, time) = instr {
-            let cycles = instruction_func::ldx(&mut cpu, &mem, mode, *time);
+            let cycles = instruction_func::ldx(&mut cpu, &mut mem, mode, *time);
             assert_eq!(cpu.x, 0x44);
             assert_eq!(cycles, 4);
             assert_eq!(cpu.p.z, false);
@@ -3212,14 +3217,14 @@ mod tests {
     #[test]
     fn ldx_absy_test_diff_page() {
         let (mut cpu, mut mem) = generate_cpu_and_mem();
-        mem.write(0x0140, 0x44).unwrap();
-        mem.write(0, 0xBE).unwrap();
-        mem.write(1, 0xC1).unwrap();
-        mem.write(2, 0x00).unwrap();
+        mem.write(0x0140, 0x44);
+        mem.write(0, 0xBE);
+        mem.write(1, 0xC1);
+        mem.write(2, 0x00);
         cpu.y = 0x7F;
-        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut mem)).unwrap();
         if let Instruction::LDX(mode, time) = instr {
-            let cycles = instruction_func::ldx(&mut cpu, &mem, mode, *time);
+            let cycles = instruction_func::ldx(&mut cpu, &mut mem, mode, *time);
             assert_eq!(cpu.x, 0x44);
             assert_eq!(cycles, 5);
             assert_eq!(cpu.p.z, false);
@@ -3232,11 +3237,11 @@ mod tests {
     #[test]
     fn ldy_imm_test() {
         let (mut cpu, mut mem) = generate_cpu_and_mem();
-        mem.write(0, 0xA0).unwrap();
-        mem.write(1, 0x44).unwrap();
-        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        mem.write(0, 0xA0);
+        mem.write(1, 0x44);
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut mem)).unwrap();
         if let Instruction::LDY(mode, time) = instr {
-            let cycles = instruction_func::ldy(&mut cpu, &mem, mode, *time);
+            let cycles = instruction_func::ldy(&mut cpu, &mut mem, mode, *time);
             assert_eq!(cpu.y, 0x44);
             assert_eq!(cycles, 2);
             assert_eq!(cpu.p.z, false);
@@ -3249,12 +3254,12 @@ mod tests {
     #[test]
     fn ldy_zp_test() {
         let (mut cpu, mut mem) = generate_cpu_and_mem();
-        mem.write(0x0040, 0x44).unwrap();  // M[0x0040] <- 0x4
-        mem.write(0, 0xA4).unwrap();
-        mem.write(1, 0x40).unwrap();
-        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        mem.write(0x0040, 0x44);  // M[0x0040] <- 0x4
+        mem.write(0, 0xA4);
+        mem.write(1, 0x40);
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut mem)).unwrap();
         if let Instruction::LDY(mode, time) = instr {
-            let cycles = instruction_func::ldy(&mut cpu, &mem, mode, *time);
+            let cycles = instruction_func::ldy(&mut cpu, &mut mem, mode, *time);
             assert_eq!(cpu.y, 0x44);
             assert_eq!(cycles, 3);
             assert_eq!(cpu.p.z, false);
@@ -3267,13 +3272,13 @@ mod tests {
     #[test]
     fn ldy_zpx_test() {
         let (mut cpu, mut mem) = generate_cpu_and_mem();
-        mem.write(0x0040, 0x44).unwrap();  // M[0x0040] <- 0x4.unwrap();
-        mem.write(0, 0xB4).unwrap();
-        mem.write(1, 0x3F).unwrap();
+        mem.write(0x0040, 0x44);  // M[0x0040] <- 0x4;
+        mem.write(0, 0xB4);
+        mem.write(1, 0x3F);
         cpu.x = 1;
-        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut mem)).unwrap();
         if let Instruction::LDY(mode, time) = instr {
-            let cycles = instruction_func::ldy(&mut cpu, &mem, mode, *time);
+            let cycles = instruction_func::ldy(&mut cpu, &mut mem, mode, *time);
             assert_eq!(cpu.y, 0x44);
             assert_eq!(cycles, 4);
             assert_eq!(cpu.p.z, false);
@@ -3286,13 +3291,13 @@ mod tests {
     #[test]
     fn ldy_abs_test() {
         let (mut cpu, mut mem) = generate_cpu_and_mem();
-        mem.write(0x0140, 0x44).unwrap();
-        mem.write(0, 0xAC).unwrap();
-        mem.write(1, 0x40).unwrap();
-        mem.write(2, 0x01).unwrap();
-        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        mem.write(0x0140, 0x44);
+        mem.write(0, 0xAC);
+        mem.write(1, 0x40);
+        mem.write(2, 0x01);
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut mem)).unwrap();
         if let Instruction::LDY(mode, time) = instr {
-            let cycles = instruction_func::ldy(&mut cpu, &mem, mode, *time);
+            let cycles = instruction_func::ldy(&mut cpu, &mut mem, mode, *time);
             assert_eq!(cpu.y, 0x44);
             assert_eq!(cycles, 4);
             assert_eq!(cpu.p.z, false);
@@ -3305,14 +3310,14 @@ mod tests {
     #[test]
     fn ldy_absx_test_same_page() {
         let (mut cpu, mut mem) = generate_cpu_and_mem();
-        mem.write(0x0140, 0x44).unwrap();
-        mem.write(0, 0xBC).unwrap();
-        mem.write(1, 0x3F).unwrap();
-        mem.write(2, 0x01).unwrap();
+        mem.write(0x0140, 0x44);
+        mem.write(0, 0xBC);
+        mem.write(1, 0x3F);
+        mem.write(2, 0x01);
         cpu.x = 0x01;
-        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut mem)).unwrap();
         if let Instruction::LDY(mode, time) = instr {
-            let cycles = instruction_func::ldy(&mut cpu, &mem, mode, *time);
+            let cycles = instruction_func::ldy(&mut cpu, &mut mem, mode, *time);
             assert_eq!(cpu.y, 0x44);
             assert_eq!(cycles, 4);
             assert_eq!(cpu.p.z, false);
@@ -3325,14 +3330,14 @@ mod tests {
     #[test]
     fn ldy_absx_test_diff_page() {
         let (mut cpu, mut mem) = generate_cpu_and_mem();
-        mem.write(0x0140, 0x44).unwrap();
-        mem.write(0, 0xBC).unwrap();
-        mem.write(1, 0xC1).unwrap();
-        mem.write(2, 0x00).unwrap();
+        mem.write(0x0140, 0x44);
+        mem.write(0, 0xBC);
+        mem.write(1, 0xC1);
+        mem.write(2, 0x00);
         cpu.x = 0x7F;
-        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut mem)).unwrap();
         if let Instruction::LDY(mode, time) = instr {
-            let cycles = instruction_func::ldy(&mut cpu, &mem, mode, *time);
+            let cycles = instruction_func::ldy(&mut cpu, &mut mem, mode, *time);
             assert_eq!(cpu.y, 0x44);
             assert_eq!(cycles, 5);
             assert_eq!(cpu.p.z, false);
@@ -3345,11 +3350,11 @@ mod tests {
     #[test]
     fn lda_imm_test() {
         let (mut cpu, mut mem) = generate_cpu_and_mem();
-        mem.write(0, 0xA9).unwrap();
-        mem.write(1, 0x44).unwrap();
-        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        mem.write(0, 0xA9);
+        mem.write(1, 0x44);
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut mem)).unwrap();
         if let Instruction::LDA(mode, time) = instr {
-            let cycles = instruction_func::lda(&mut cpu, &mem, mode, *time);
+            let cycles = instruction_func::lda(&mut cpu, &mut mem, mode, *time);
             assert_eq!(cpu.a, 0x44);
             assert_eq!(cycles, 2);
             assert_eq!(cpu.p.z, false);
@@ -3362,12 +3367,12 @@ mod tests {
     #[test]
     fn lda_zp_test() {
         let (mut cpu, mut mem) = generate_cpu_and_mem();
-        mem.write(0x0040, 0x44).unwrap();  // M[0x0040] <- 0x4
-        mem.write(0, 0xA5).unwrap(); // LDA 
-        mem.write(1, 0x40).unwrap();
-        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        mem.write(0x0040, 0x44);  // M[0x0040] <- 0x4
+        mem.write(0, 0xA5); // LDA 
+        mem.write(1, 0x40);
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut mem)).unwrap();
         if let Instruction::LDA(mode, time) = instr {
-            let cycles = instruction_func::lda(&mut cpu, &mem, mode, *time);
+            let cycles = instruction_func::lda(&mut cpu, &mut mem, mode, *time);
             assert_eq!(cpu.a, 0x44);
             assert_eq!(cycles, 3);
             assert_eq!(cpu.p.z, false);
@@ -3380,13 +3385,13 @@ mod tests {
     #[test]
     fn lda_zpx_test() {
         let (mut cpu, mut mem) = generate_cpu_and_mem();
-        mem.write(0x0040, 0x44).unwrap();  // M[0x0040] <- 0x4
-        mem.write(0, 0xB5).unwrap();
-        mem.write(1, 0x3F).unwrap();
+        mem.write(0x0040, 0x44);  // M[0x0040] <- 0x4
+        mem.write(0, 0xB5);
+        mem.write(1, 0x3F);
         cpu.x = 1;
-        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut mem)).unwrap();
         if let Instruction::LDA(mode, time) = instr {
-            let cycles = instruction_func::lda(&mut cpu, &mem, mode, *time);
+            let cycles = instruction_func::lda(&mut cpu, &mut mem, mode, *time);
             assert_eq!(cpu.a, 0x44);
             assert_eq!(cycles, 4);
             assert_eq!(cpu.p.z, false);
@@ -3399,13 +3404,13 @@ mod tests {
     #[test]
     fn lda_abs_test() {
         let (mut cpu, mut mem) = generate_cpu_and_mem();
-        mem.write(0x0140, 0x44).unwrap();
-        mem.write(0, 0xAD).unwrap();
-        mem.write(1, 0x40).unwrap();
-        mem.write(2, 0x01).unwrap();
-        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        mem.write(0x0140, 0x44);
+        mem.write(0, 0xAD);
+        mem.write(1, 0x40);
+        mem.write(2, 0x01);
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut mem)).unwrap();
         if let Instruction::LDA(mode, time) = instr {
-            let cycles = instruction_func::lda(&mut cpu, &mem, mode, *time);
+            let cycles = instruction_func::lda(&mut cpu, &mut mem, mode, *time);
             assert_eq!(cpu.a, 0x44);
             assert_eq!(cycles, 4);
             assert_eq!(cpu.p.z, false);
@@ -3418,14 +3423,14 @@ mod tests {
     #[test]
     fn lda_absx_test_same_page() {
         let (mut cpu, mut mem) = generate_cpu_and_mem();
-        mem.write(0x0140, 0x44).unwrap();
-        mem.write(0, 0xBD).unwrap();
-        mem.write(1, 0x3F).unwrap();
-        mem.write(2, 0x01).unwrap();
+        mem.write(0x0140, 0x44);
+        mem.write(0, 0xBD);
+        mem.write(1, 0x3F);
+        mem.write(2, 0x01);
         cpu.x = 0x01;
-        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut mem)).unwrap();
         if let Instruction::LDA(mode, time) = instr {
-            let cycles = instruction_func::lda(&mut cpu, &mem, mode, *time);
+            let cycles = instruction_func::lda(&mut cpu, &mut mem, mode, *time);
             assert_eq!(cpu.a, 0x44);
             assert_eq!(cycles, 4);
             assert_eq!(cpu.p.z, false);
@@ -3438,14 +3443,14 @@ mod tests {
     #[test]
     fn lda_absx_test_diff_page() {
         let (mut cpu, mut mem) = generate_cpu_and_mem();
-        mem.write(0x0140, 0x44).unwrap();
-        mem.write(0, 0xBD).unwrap();
-        mem.write(1, 0xC1).unwrap();
-        mem.write(2, 0x00).unwrap();
+        mem.write(0x0140, 0x44);
+        mem.write(0, 0xBD);
+        mem.write(1, 0xC1);
+        mem.write(2, 0x00);
         cpu.x = 0x7F;
-        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut mem)).unwrap();
         if let Instruction::LDA(mode, time) = instr {
-            let cycles = instruction_func::lda(&mut cpu, &mem, mode, *time);
+            let cycles = instruction_func::lda(&mut cpu, &mut mem, mode, *time);
             assert_eq!(cpu.a, 0x44);
             assert_eq!(cycles, 5);
             assert_eq!(cpu.p.z, false);
@@ -3458,14 +3463,14 @@ mod tests {
     #[test]
     fn lda_absy_test_same_page() {
         let (mut cpu, mut mem) = generate_cpu_and_mem();
-        mem.write(0x0140, 0x44).unwrap();
-        mem.write(0, 0xB9).unwrap();
-        mem.write(1, 0x3F).unwrap();
-        mem.write(2, 0x01).unwrap();
+        mem.write(0x0140, 0x44);
+        mem.write(0, 0xB9);
+        mem.write(1, 0x3F);
+        mem.write(2, 0x01);
         cpu.y = 0x01;
-        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut mem)).unwrap();
         if let Instruction::LDA(mode, time) = instr {
-            let cycles = instruction_func::lda(&mut cpu, &mem, mode, *time);
+            let cycles = instruction_func::lda(&mut cpu, &mut mem, mode, *time);
             assert_eq!(cpu.a, 0x44);
             assert_eq!(cycles, 4);
             assert_eq!(cpu.p.z, false);
@@ -3478,14 +3483,14 @@ mod tests {
     #[test]
     fn lda_absy_test_diff_page() {
         let (mut cpu, mut mem) = generate_cpu_and_mem();
-        mem.write(0x0140, 0x44).unwrap();
-        mem.write(0, 0xB9).unwrap();
-        mem.write(1, 0xC1).unwrap();
-        mem.write(2, 0x00).unwrap();
+        mem.write(0x0140, 0x44);
+        mem.write(0, 0xB9);
+        mem.write(1, 0xC1);
+        mem.write(2, 0x00);
         cpu.y = 0x7F;
-        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut mem)).unwrap();
         if let Instruction::LDA(mode, time) = instr {
-            let cycles = instruction_func::lda(&mut cpu, &mem, mode, *time);
+            let cycles = instruction_func::lda(&mut cpu, &mut mem, mode, *time);
             assert_eq!(cpu.a, 0x44);
             assert_eq!(cycles, 5);
             assert_eq!(cpu.p.z, false);
@@ -3498,15 +3503,15 @@ mod tests {
     #[test]
     fn lda_idx_in_test() {
         let (mut cpu, mut mem) = generate_cpu_and_mem();
-        mem.write(0x0140, 0x44).unwrap();
-        mem.write(0, 0xA1).unwrap();
-        mem.write(1, 0xFD).unwrap();
-        mem.write(0xFE, 0x40).unwrap();
-        mem.write(0xFF, 0x01).unwrap();
+        mem.write(0x0140, 0x44);
+        mem.write(0, 0xA1);
+        mem.write(1, 0xFD);
+        mem.write(0xFE, 0x40);
+        mem.write(0xFF, 0x01);
         cpu.x = 1;
-        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut mem)).unwrap();
         if let Instruction::LDA(mode, time) = instr {
-            let cycles = instruction_func::lda(&mut cpu, &mem, mode, *time);
+            let cycles = instruction_func::lda(&mut cpu, &mut mem, mode, *time);
             assert_eq!(cpu.a, 0x44);
             assert_eq!(cycles, 6);
             assert_eq!(cpu.p.z, false);
@@ -3520,15 +3525,15 @@ mod tests {
     #[test]
     fn lda_in_idx_same_page_test() {
         let (mut cpu, mut mem) = generate_cpu_and_mem();
-        mem.write(0x0140, 0x44).unwrap();
-        mem.write(0, 0xB1).unwrap();
-        mem.write(1, 0xFE).unwrap();
-        mem.write(0xFE, 0x3F).unwrap();
-        mem.write(0xFF, 0x01).unwrap();
+        mem.write(0x0140, 0x44);
+        mem.write(0, 0xB1);
+        mem.write(1, 0xFE);
+        mem.write(0xFE, 0x3F);
+        mem.write(0xFF, 0x01);
         cpu.y = 1;
-        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut mem)).unwrap();
         if let Instruction::LDA(mode, time) = instr {
-            let cycles = instruction_func::lda(&mut cpu, &mem, mode, *time);
+            let cycles = instruction_func::lda(&mut cpu, &mut mem, mode, *time);
             assert_eq!(cpu.a, 0x44);
             assert_eq!(cycles, 5);
             assert_eq!(cpu.p.z, false);
@@ -3541,15 +3546,15 @@ mod tests {
     #[test]
     fn lda_in_idx_diff_page_test() {
         let (mut cpu, mut mem) = generate_cpu_and_mem();
-        mem.write(0x0140, 0x44).unwrap();
-        mem.write(0, 0xB1).unwrap();
-        mem.write(1, 0xFE).unwrap();
-        mem.write(0xFE, 0xC1).unwrap();
-        mem.write(0xFF, 0x00).unwrap();
+        mem.write(0x0140, 0x44);
+        mem.write(0, 0xB1);
+        mem.write(1, 0xFE);
+        mem.write(0xFE, 0xC1);
+        mem.write(0xFF, 0x00);
         cpu.y = 0x7F;
-        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut mem)).unwrap();
         if let Instruction::LDA(mode, time) = instr {
-            let cycles = instruction_func::lda(&mut cpu, &mem, mode, *time);
+            let cycles = instruction_func::lda(&mut cpu, &mut mem, mode, *time);
             assert_eq!(cpu.a, 0x44);
             assert_eq!(cycles, 6);
             assert_eq!(cpu.p.z, false);
@@ -3562,11 +3567,11 @@ mod tests {
     #[test]
     fn lda_imm_zero_test() {
         let (mut cpu, mut mem) = generate_cpu_and_mem();
-        mem.write(0, 0xA9).unwrap();
-        mem.write(1, 0x00).unwrap();
-        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        mem.write(0, 0xA9);
+        mem.write(1, 0x00);
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut mem)).unwrap();
         if let Instruction::LDA(mode, time) = instr {
-            let cycles = instruction_func::lda(&mut cpu, &mem, mode, *time);
+            let cycles = instruction_func::lda(&mut cpu, &mut mem, mode, *time);
             assert_eq!(cpu.a, 0x00);
             assert_eq!(cycles, 2);
             assert_eq!(cpu.p.z, true);
@@ -3579,11 +3584,11 @@ mod tests {
     #[test]
     fn lda_imm_neg_test() {
         let (mut cpu, mut mem) = generate_cpu_and_mem();
-        mem.write(0, 0xA9).unwrap();
-        mem.write(1, 0x80).unwrap();
-        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        mem.write(0, 0xA9);
+        mem.write(1, 0x80);
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut mem)).unwrap();
         if let Instruction::LDA(mode, time) = instr {
-            let cycles = instruction_func::lda(&mut cpu, &mem, mode, *time);
+            let cycles = instruction_func::lda(&mut cpu, &mut mem, mode, *time);
             assert_eq!(cpu.a, 0x80);
             assert_eq!(cycles, 2);
             assert_eq!(cpu.p.z, false);
@@ -3596,9 +3601,9 @@ mod tests {
     #[test]
     fn lsr_acc_test() {
         let (mut cpu, mut mem) = generate_cpu_and_mem();
-        mem.write(0, 0x4A).unwrap();
+        mem.write(0, 0x4A);
         cpu.a = 0x02;
-        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut mem)).unwrap();
         if let Instruction::LSR(mode, time) = instr {
             let cycles = instruction_func::lsr(&mut cpu, &mut mem, mode, *time);
             assert_eq!(cpu.a, 0x01);
@@ -3614,9 +3619,9 @@ mod tests {
     #[test]
     fn lsr_acc_carry_and_zero_test() {
         let (mut cpu, mut mem) = generate_cpu_and_mem();
-        mem.write(0, 0x4A).unwrap();
+        mem.write(0, 0x4A);
         cpu.a = 0x01;
-        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut mem)).unwrap();
         if let Instruction::LSR(mode, time) = instr {
             let cycles = instruction_func::lsr(&mut cpu, &mut mem, mode, *time);
             assert_eq!(cpu.a, 0x00);
@@ -3632,11 +3637,11 @@ mod tests {
     #[test]
     fn lsr_abs_test() {
         let (mut cpu, mut mem) = generate_cpu_and_mem();
-        mem.write(0, 0x4E).unwrap();
-        mem.write(1, 0x40).unwrap();
-        mem.write(2, 0x01).unwrap();
-        mem.write(0x0140, 0x02).unwrap();
-        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        mem.write(0, 0x4E);
+        mem.write(1, 0x40);
+        mem.write(2, 0x01);
+        mem.write(0x0140, 0x02);
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut mem)).unwrap();
         if let Instruction::LSR(mode, time) = instr {
             let cycles = instruction_func::lsr(&mut cpu, &mut mem, mode, *time);
             assert_eq!(mem.read(0x0140), 0x01);
@@ -3652,12 +3657,12 @@ mod tests {
     #[test]
     fn ora_imm_test() {
         let (mut cpu, mut mem) = generate_cpu_and_mem();
-        mem.write(0, 0x09).unwrap();
-        mem.write(1, 0x7F).unwrap();
+        mem.write(0, 0x09);
+        mem.write(1, 0x7F);
         cpu.a = 0x00;
-        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut mem)).unwrap();
         if let Instruction::ORA(mode, time) = instr {
-            let cycles = instruction_func::ora(&mut cpu, &mem, mode, *time);
+            let cycles = instruction_func::ora(&mut cpu, &mut mem, mode, *time);
             assert_eq!(cpu.a, 0x7f);
             assert_eq!(cycles, 2);
             assert_eq!(cpu.p.z, false);
@@ -3670,12 +3675,12 @@ mod tests {
     #[test]
     fn ora_imm_zero_test() {
         let (mut cpu, mut mem) = generate_cpu_and_mem();
-        mem.write(0, 0x09).unwrap();
-        mem.write(1, 0x00).unwrap();
+        mem.write(0, 0x09);
+        mem.write(1, 0x00);
         cpu.a = 0x00;
-        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut mem)).unwrap();
         if let Instruction::ORA(mode, time) = instr {
-            let cycles = instruction_func::ora(&mut cpu, &mem, mode, *time);
+            let cycles = instruction_func::ora(&mut cpu, &mut mem, mode, *time);
             assert_eq!(cpu.a, 0x00);
             assert_eq!(cycles, 2);
             assert_eq!(cpu.p.z, true);
@@ -3688,12 +3693,12 @@ mod tests {
     #[test]
     fn ora_imm_neg_test() {
         let (mut cpu, mut mem) = generate_cpu_and_mem();
-        mem.write(0, 0x09).unwrap();
-        mem.write(1, 0x0F).unwrap();
+        mem.write(0, 0x09);
+        mem.write(1, 0x0F);
         cpu.a = 0xF0;
-        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut mem)).unwrap();
         if let Instruction::ORA(mode, time) = instr {
-            let cycles = instruction_func::ora(&mut cpu, &mem, mode, *time);
+            let cycles = instruction_func::ora(&mut cpu, &mut mem, mode, *time);
             assert_eq!(cpu.a, 0xFF);
             assert_eq!(cycles, 2);
             assert_eq!(cpu.p.z, false);
@@ -3706,9 +3711,9 @@ mod tests {
     #[test]
     fn rol_acc_test() {
         let (mut cpu, mut mem) = generate_cpu_and_mem();
-        mem.write(0, 0x2A).unwrap();
+        mem.write(0, 0x2A);
         cpu.a = 0x01;
-        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut mem)).unwrap();
         if let Instruction::ROL(mode, time) = instr {
             let cycles = instruction_func::rol(&mut cpu, &mut mem, mode, *time);
             assert_eq!(cpu.a, 0x02);
@@ -3724,9 +3729,9 @@ mod tests {
     #[test]
     fn rol_acc_carry_and_zero_test() {
         let (mut cpu, mut mem) = generate_cpu_and_mem();
-        mem.write(0, 0x2A).unwrap();
+        mem.write(0, 0x2A);
         cpu.a = 0x80;
-        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut mem)).unwrap();
         if let Instruction::ROL(mode, time) = instr {
             let cycles = instruction_func::rol(&mut cpu, &mut mem, mode, *time);
             assert_eq!(cpu.a, 0x00);
@@ -3742,9 +3747,9 @@ mod tests {
     #[test]
     fn rol_acc_neg_test() {
         let (mut cpu, mut mem) = generate_cpu_and_mem();
-        mem.write(0, 0x2A).unwrap();
+        mem.write(0, 0x2A);
         cpu.a = 0x40;
-        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut mem)).unwrap();
         if let Instruction::ROL(mode, time) = instr {
             let cycles = instruction_func::rol(&mut cpu, &mut mem, mode, *time);
             assert_eq!(cpu.a, 0x80);
@@ -3760,10 +3765,10 @@ mod tests {
     #[test]
     fn rol_acc_with_carry_test() {
         let (mut cpu, mut mem) = generate_cpu_and_mem();
-        mem.write(0, 0x2A).unwrap();
+        mem.write(0, 0x2A);
         cpu.p.c = true;
         cpu.a = 0x01;
-        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut mem)).unwrap();
         if let Instruction::ROL(mode, time) = instr {
             let cycles = instruction_func::rol(&mut cpu, &mut mem, mode, *time);
             assert_eq!(cpu.a, 0x03);
@@ -3779,11 +3784,11 @@ mod tests {
     #[test]
     fn rol_abs_test() {
         let (mut cpu, mut mem) = generate_cpu_and_mem();
-        mem.write(0, 0x2E).unwrap();
-        mem.write(1, 0x40).unwrap();
-        mem.write(2, 0x01).unwrap();
-        mem.write(0x0140, 0x01).unwrap();
-        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        mem.write(0, 0x2E);
+        mem.write(1, 0x40);
+        mem.write(2, 0x01);
+        mem.write(0x0140, 0x01);
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut mem)).unwrap();
         if let Instruction::ROL(mode, time) = instr {
             let cycles = instruction_func::rol(&mut cpu, &mut mem, mode, *time);
             assert_eq!(mem.read(0x0140), 0x02);
@@ -3799,9 +3804,9 @@ mod tests {
     #[test]
     fn ror_acc_test() {
         let (mut cpu, mut mem) = generate_cpu_and_mem();
-        mem.write(0, 0x6A).unwrap();
+        mem.write(0, 0x6A);
         cpu.a = 0x02;
-        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut mem)).unwrap();
         if let Instruction::ROR(mode, time) = instr {
             let cycles = instruction_func::ror(&mut cpu, &mut mem, mode, *time);
             assert_eq!(cpu.a, 0x01);
@@ -3817,10 +3822,10 @@ mod tests {
     #[test]
     fn ror_acc_with_carry_test() {
         let (mut cpu, mut mem) = generate_cpu_and_mem();
-        mem.write(0, 0x6A).unwrap();
+        mem.write(0, 0x6A);
         cpu.a = 0x02;
         cpu.p.c = true;
-        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut mem)).unwrap();
         if let Instruction::ROR(mode, time) = instr {
             let cycles = instruction_func::ror(&mut cpu, &mut mem, mode, *time);
             assert_eq!(cpu.a, 0x81);
@@ -3836,9 +3841,9 @@ mod tests {
     #[test]
     fn ror_acc_carry_and_zero_test() {
         let (mut cpu, mut mem) = generate_cpu_and_mem();
-        mem.write(0, 0x6A).unwrap();
+        mem.write(0, 0x6A);
         cpu.a = 0x01;
-        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut mem)).unwrap();
         if let Instruction::ROR(mode, time) = instr {
             let cycles = instruction_func::ror(&mut cpu, &mut mem, mode, *time);
             assert_eq!(cpu.a, 0x00);
@@ -3854,11 +3859,11 @@ mod tests {
     #[test]
     fn ror_abs_test() {
         let (mut cpu, mut mem) = generate_cpu_and_mem();
-        mem.write(0, 0x6E).unwrap();
-        mem.write(1, 0x40).unwrap();
-        mem.write(2, 0x01).unwrap();
-        mem.write(0x0140, 0x02).unwrap();
-        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        mem.write(0, 0x6E);
+        mem.write(1, 0x40);
+        mem.write(2, 0x01);
+        mem.write(0x0140, 0x02);
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut mem)).unwrap();
         if let Instruction::ROR(mode, time) = instr {
             let cycles = instruction_func::ror(&mut cpu, &mut mem, mode, *time);
             assert_eq!(mem.read(0x0140), 0x01);
@@ -3876,8 +3881,8 @@ mod tests {
         let (mut cpu, mut mem) = generate_cpu_and_mem();
         cpu.sp = 0xFF;
         cpu.a = 0xBE;
-        mem.write(0, 0x48).unwrap();
-        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        mem.write(0, 0x48);
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut mem)).unwrap();
         if let Instruction::PHA(mode, time) = instr {
             let cycles = instruction_func::pha(&mut cpu, &mut mem, mode, *time);
             assert_eq!(cycles, 3);
@@ -3894,8 +3899,8 @@ mod tests {
         cpu.sp = 0xFF;
         cpu.p.n = true;
         cpu.p.c = true;
-        mem.write(0, 0x08).unwrap();
-        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        mem.write(0, 0x08);
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut mem)).unwrap();
         if let Instruction::PHP(mode, time) = instr {
             let cycles = instruction_func::php(&mut cpu, &mut mem, mode, *time);
             assert_eq!(cycles, 3);
@@ -3910,9 +3915,9 @@ mod tests {
     fn pla_test() {
         let (mut cpu, mut mem) = generate_cpu_and_mem();
         cpu.sp = 0xFE;
-        mem.write(0x01FF, 0x7F).unwrap();
-        mem.write(0, 0x68).unwrap();
-        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        mem.write(0x01FF, 0x7F);
+        mem.write(0, 0x68);
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut mem)).unwrap();
         if let Instruction::PLA(mode, time) = instr {
             let cycles = instruction_func::pla(&mut cpu, &mut mem, mode, *time);
             assert_eq!(cycles, 4);
@@ -3930,9 +3935,9 @@ mod tests {
         let (mut cpu, mut mem) = generate_cpu_and_mem();
         cpu.sp = 0xFE;
         cpu.a = 0xFF;
-        mem.write(0x01FF, 0x00).unwrap();
-        mem.write(0, 0x68).unwrap();
-        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        mem.write(0x01FF, 0x00);
+        mem.write(0, 0x68);
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut mem)).unwrap();
         if let Instruction::PLA(mode, time) = instr {
             let cycles = instruction_func::pla(&mut cpu, &mut mem, mode, *time);
             assert_eq!(cycles, 4);
@@ -3950,9 +3955,9 @@ mod tests {
     fn pla_neg_test() {
         let (mut cpu, mut mem) = generate_cpu_and_mem();
         cpu.sp = 0xFE;
-        mem.write(0x01FF, 0xFF).unwrap();
-        mem.write(0, 0x68).unwrap();
-        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        mem.write(0x01FF, 0xFF);
+        mem.write(0, 0x68);
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut mem)).unwrap();
         if let Instruction::PLA(mode, time) = instr {
             let cycles = instruction_func::pla(&mut cpu, &mut mem, mode, *time);
             assert_eq!(cycles, 4);
@@ -3970,9 +3975,9 @@ mod tests {
     fn plp_test() {
         let (mut cpu, mut mem) = generate_cpu_and_mem();
         cpu.sp = 0xFE;
-        mem.write(0x01FF, 0xFF).unwrap();
-        mem.write(0, 0x28).unwrap();
-        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        mem.write(0x01FF, 0xFF);
+        mem.write(0, 0x28);
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut mem)).unwrap();
         if let Instruction::PLP(mode, time) = instr {
             let cycles = instruction_func::plp(&mut cpu, &mut mem, mode, *time);
             assert_eq!(cycles, 4);
@@ -3992,11 +3997,11 @@ mod tests {
     #[test]
     fn rts_test() {
         let (mut cpu, mut mem) = generate_cpu_and_mem();
-        mem.write(0, 0x60).unwrap();
-        mem.write(0x01FF, 0x42).unwrap();
-        mem.write(0x01FE, 0x02).unwrap();
+        mem.write(0, 0x60);
+        mem.write(0x01FF, 0x42);
+        mem.write(0x01FE, 0x02);
         cpu.sp = 0xFD;
-        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut mem)).unwrap();
         if let Instruction::RTS(mode, time) = instr {
             let cycles = instruction_func::rts(&mut cpu, &mut mem, mode, *time);
             assert_eq!(cycles, 6);
@@ -4010,12 +4015,12 @@ mod tests {
     #[test]
     fn rti_test() {
         let (mut cpu, mut mem) = generate_cpu_and_mem();
-        mem.write(0, 0x40).unwrap();
-        mem.write(0x01FF, 0x43).unwrap();
-        mem.write(0x01FE, 0x02).unwrap();
-        mem.write(0x01FD, 0xFF).unwrap();
+        mem.write(0, 0x40);
+        mem.write(0x01FF, 0x43);
+        mem.write(0x01FE, 0x02);
+        mem.write(0x01FD, 0xFF);
         cpu.sp = 0xFC;
-        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut mem)).unwrap();
         if let Instruction::RTI(mode, time) = instr {
             let cycles = instruction_func::rti(&mut cpu, &mut mem, mode, *time);
             assert_eq!(cycles, 6);
@@ -4036,12 +4041,12 @@ mod tests {
     #[test]
     fn sta_zp_test() {
         let (mut cpu, mut mem) = generate_cpu_and_mem();
-        mem.write(0, 0xA9).unwrap(); // LDA #$4
-        mem.write(1, 0x44).unwrap();
-        mem.write(2, 0x85).unwrap(); // STA $4
-        mem.write(3, 0x40).unwrap();
-        cpu.instruction_cycle(&mut mem).unwrap(); // execte the LDA instruction
-        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        mem.write(0, 0xA9); // LDA #$4
+        mem.write(1, 0x44);
+        mem.write(2, 0x85); // STA $4
+        mem.write(3, 0x40);
+        cpu.instruction_cycle(&mut mem); // execte the LDA instruction
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut mem)).unwrap();
         if let Instruction::STA(mode, time) = instr {
             let cycles = instruction_func::sta(&mut cpu, &mut mem, mode, *time);
             assert_eq!(cpu.a, 0x44);
@@ -4055,10 +4060,10 @@ mod tests {
     #[test]
     fn stx_zp_test() {
         let (mut cpu, mut mem) = generate_cpu_and_mem();
-        mem.write(0, 0x86).unwrap(); // STX $4
-        mem.write(1, 0x40).unwrap();
+        mem.write(0, 0x86); // STX $4
+        mem.write(1, 0x40);
         cpu.x = 0x44;
-        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut mem)).unwrap();
         if let Instruction::STX(mode, time) = instr {
             let cycles = instruction_func::stx(&mut cpu, &mut mem, mode, *time);
             assert_eq!(mem.read(0x0040), 0x44);
@@ -4069,10 +4074,10 @@ mod tests {
     #[test]
     fn sty_zp_test() {
         let (mut cpu, mut mem) = generate_cpu_and_mem();
-        mem.write(0, 0x84).unwrap(); // STY $4
-        mem.write(1, 0x40).unwrap();
+        mem.write(0, 0x84); // STY $4
+        mem.write(1, 0x40);
         cpu.y = 0x44;
-        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut mem)).unwrap();
         if let Instruction::STY(mode, time) = instr {
             let cycles = instruction_func::sty(&mut cpu, &mut mem, mode, *time);
             assert_eq!(mem.read(0x0040), 0x44);
@@ -4083,12 +4088,12 @@ mod tests {
     #[test]
     fn sbc_imm_test_no_carry_no_overflow() {
         let (mut cpu, mut mem) = generate_cpu_and_mem();
-        mem.write(0, 0xE9).unwrap();
-        mem.write(1, 0x30).unwrap();
+        mem.write(0, 0xE9);
+        mem.write(1, 0x30);
         cpu.a = 0x50;
-        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut mem)).unwrap();
         if let Instruction::SBC(mode, time) = instr {
-            let cycles = instruction_func::sbc(&mut cpu, &mem, mode, *time);
+            let cycles = instruction_func::sbc(&mut cpu, &mut mem, mode, *time);
             assert_eq!(cpu.a, 0x1F);
             assert_eq!(cycles, 2);
             assert_eq!(cpu.p.z, false);
@@ -4103,12 +4108,12 @@ mod tests {
     #[test]
     fn sbc_imm_test_zero() {
         let (mut cpu, mut mem) = generate_cpu_and_mem();
-        mem.write(0, 0xE9).unwrap();
-        mem.write(1, 0x01).unwrap();
+        mem.write(0, 0xE9);
+        mem.write(1, 0x01);
         cpu.a = 0x02;
-        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut mem)).unwrap();
         if let Instruction::SBC(mode, time) = instr {
-            let cycles = instruction_func::sbc(&mut cpu, &mem, mode, *time);
+            let cycles = instruction_func::sbc(&mut cpu, &mut mem, mode, *time);
             assert_eq!(cpu.a, 0x00);
             assert_eq!(cycles, 2);
             assert_eq!(cpu.p.z, true);
@@ -4123,12 +4128,12 @@ mod tests {
     #[test]
     fn sbc_imm_test_neg() {
         let (mut cpu, mut mem) = generate_cpu_and_mem();
-        mem.write(0, 0xE9).unwrap();
-        mem.write(1, 0x30).unwrap();
+        mem.write(0, 0xE9);
+        mem.write(1, 0x30);
         cpu.a = 0xD0;
-        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut mem)).unwrap();
         if let Instruction::SBC(mode, time) = instr {
-            let cycles = instruction_func::sbc(&mut cpu, &mem, mode, *time); // will do 1 + -2
+            let cycles = instruction_func::sbc(&mut cpu, &mut mem, mode, *time); // will do 1 + -2
             assert_eq!(cpu.a, 0x9F);
             assert_eq!(cycles, 2);
             assert_eq!(cpu.p.z, false);
@@ -4143,12 +4148,12 @@ mod tests {
     #[test]
     fn sbc_imm_test_no_carry_overflow() {
         let (mut cpu, mut mem) = generate_cpu_and_mem();
-        mem.write(0, 0xE9).unwrap();
-        mem.write(1, 0x70).unwrap();
+        mem.write(0, 0xE9);
+        mem.write(1, 0x70);
         cpu.a = 0xD0;
-        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut mem)).unwrap();
         if let Instruction::SBC(mode, time) = instr {
-            let cycles = instruction_func::sbc(&mut cpu, &mem, mode, *time);
+            let cycles = instruction_func::sbc(&mut cpu, &mut mem, mode, *time);
             assert_eq!(cpu.a, 0x5F);
             assert_eq!(cycles, 2);
             assert_eq!(cpu.p.z, false);
@@ -4163,12 +4168,12 @@ mod tests {
     #[test]
     fn sbc_imm_test_carry_no_overflow() {
         let (mut cpu, mut mem) = generate_cpu_and_mem();
-        mem.write(0, 0xE9).unwrap();
-        mem.write(1, 0xF0).unwrap();
+        mem.write(0, 0xE9);
+        mem.write(1, 0xF0);
         cpu.a = 0xD0;
-        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut mem)).unwrap();
         if let Instruction::SBC(mode, time) = instr {
-            let cycles = instruction_func::sbc(&mut cpu, &mem, mode, *time);
+            let cycles = instruction_func::sbc(&mut cpu, &mut mem, mode, *time);
             assert_eq!(cpu.a, 0xDF);
             assert_eq!(cycles, 2);
             assert_eq!(cpu.p.z, false);
@@ -4183,12 +4188,12 @@ mod tests {
     #[test]
     fn sbc_imm_test_carry_overflow() {
         let (mut cpu, mut mem) = generate_cpu_and_mem();
-        mem.write(0, 0xE9).unwrap();
-        mem.write(1, 0xB0).unwrap();
+        mem.write(0, 0xE9);
+        mem.write(1, 0xB0);
         cpu.a = 0x50;
-        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mem)).unwrap();
+        let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut mem)).unwrap();
         if let Instruction::SBC(mode, time) = instr {
-            let cycles = instruction_func::sbc(&mut cpu, &mem, mode, *time);
+            let cycles = instruction_func::sbc(&mut cpu, &mut mem, mode, *time);
             assert_eq!(cpu.a, 0x9F);
             assert_eq!(cycles, 2);
             assert_eq!(cpu.p.z, false);

@@ -72,11 +72,10 @@ impl Memory<VideoMemorySegment> for VideoMemory {
         self.data[adjusted_addr as usize]
     }
 
-    fn write(&mut self, addr: u16, byte: u8) -> Result<(), &'static str> {
+    fn write(&mut self, addr: u16, byte: u8) {
 
 	let adjusted_addr = Self::get_adjusted_address(addr);
         self.data[adjusted_addr as usize] = byte;
-	Ok(())
     }
 }
 
@@ -102,9 +101,9 @@ mod tests {
 	
 	let mut memory = VideoMemory::new();
 
-	memory.write(0x0, 1).unwrap();
-	memory.write(0x1FFF, 2).unwrap();
-	memory.write(0x5FFE, 3).unwrap();
+	memory.write(0x0, 1);
+	memory.write(0x1FFF, 2);
+	memory.write(0x5FFE, 3);
 
 	assert_eq!(memory.read(0x0), 1);
 	assert_eq!(memory.read(0x4000), 1);
@@ -135,9 +134,9 @@ mod tests {
 
 	let mut memory = VideoMemory::new();
 
-	memory.write(0x2000, 1).unwrap();
-	memory.write(0x2EFF, 2).unwrap();
-	memory.write(0x2FFF, 3).unwrap();
+	memory.write(0x2000, 1);
+	memory.write(0x2EFF, 2);
+	memory.write(0x2FFF, 3);
 
 	assert_eq!(memory.read(0x2000), 1);
 	assert_eq!(memory.read(0x3000), 1);
@@ -170,8 +169,8 @@ mod tests {
 
 	let mut memory = VideoMemory::new();
 	
-	memory.write(0x3F00, 1).unwrap();
-	memory.write(0x3F1F, 2).unwrap();
+	memory.write(0x3F00, 1);
+	memory.write(0x3F1F, 2);
 
 	assert_eq!(memory.read(0x3F00), 1);
 	assert_eq!(memory.read(0x3F20), 1);

@@ -6,6 +6,17 @@ use crate::memory::MemorySegmentation;
 use crate::main_memory::MainMemory;
 use crate::main_memory::MainMemorySegment;
 
+const PPU_CONTROL_1: u16 = 0x2000;
+const PPU_CONTROL_2: u16 = 0x2001;
+const PPU_STATUS:    u16 = 0x2002;
+const SPR_RAM_ADDR:  u16 = 0x2003;
+const SPR_RAM_IO:    u16 = 0x2004;
+const VRAM_ADDR_1:   u16 = 0x2005;
+const VRAM_ADDR_2:   u16 = 0x2006;
+const VRAM_ADDR_IO:  u16 = 0x2007;
+const SPRITE_DMA:    u16 = 0x4014;
+
+
 /// Structure for handling the status register
 pub struct StatusRegister {
     pub n: bool,
@@ -76,14 +87,14 @@ impl CPU {
     }
 
     /// Perform a reset interrupt request
-    pub fn reset(&mut self) -> &Self {
-        self
+    pub fn reset(&mut self, memory: &mut MainMemory) {
+	self.pc = ((CPU::mem_read(memory, 0xFFFD) as u16) << 8) | CPU::mem_read(memory, 0xFFFC) as u16
     }
 
     /// Push a value onto the stack
     pub fn push_stack(&mut self, memory: &mut MainMemory, val: u8) -> &Self {
         let stack_addr = STACK_MEMORY_PAGE + self.sp as u16;
-        memory.write(stack_addr, val).unwrap();
+        memory.write(stack_addr, val);
         let (new_stack_addr, underflowed) = self.sp.overflowing_sub(1);
         self.sp = new_stack_addr;
         if underflowed {
@@ -200,13 +211,30 @@ impl CPU {
 	match MainMemorySegment::get_segmentation(addr) {
 	    MainMemorySegment::ExpansionRom | MainMemorySegment::PRGROM => {
 		Err("CPU attempted to write to read only memory!")
+	    },
+	    MainMemorySegment::IORegisters(_) => {
+		if addr == 0x2002 {
+		    Err("CPU attempted to write to PPU status register!")
+		} else {
+		    Ok(memory.write(addr, byte))
+		}
 	    }
-	    _ => memory.write(addr, byte)
+	    _ => Ok(memory.write(addr, byte))
 	}
     }
 
-    pub fn mem_read(memory: &MainMemory, addr: u16) -> u8 {
+    pub fn mem_read(memory: &mut MainMemory, addr: u16) -> u8 {
 
-	memory.read(addr)
+	let value = memory.read(addr);
+
+	if addr == 0x2002 {
+	    // special conditions for reading PPU status.
+	    //    - Bit 7 will be cleared
+	    //    - Address latch of PPUSCROLL and PPUADDR is cleared
+	    memory.write(addr, value & 0x7F);
+	    // TODO
+	}
+
+	value
     }
 }

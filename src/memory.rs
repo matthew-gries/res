@@ -5,7 +5,7 @@ pub trait MemorySegmentation<T> {
 pub trait Memory<T: MemorySegmentation<T>> {
     fn read(&self, addr: u16) -> u8;
 
-    fn write(&mut self, addr: u16, byte: u8) -> Result<(), &'static str>;
+    fn write(&mut self, addr: u16, byte: u8);
 
     fn get_adjusted_address(addr: u16) -> u16;
 }
