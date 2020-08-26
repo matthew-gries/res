@@ -2,10 +2,9 @@ use crate::instruction::Instruction;
 use crate::instruction::instruction_func;
 use crate::instruction::INSTRUCTION_TABLE;
 use crate::memory::Memory;
-use crate::memory::MemorySegmentation;
 use crate::main_memory::MainMemory;
-use crate::main_memory::MainMemorySegment;
 
+// Constants to represent the PPU registers in the main memory
 const PPU_CONTROL_1: u16 = 0x2000;
 const PPU_CONTROL_2: u16 = 0x2001;
 const PPU_STATUS:    u16 = 0x2002;
@@ -17,7 +16,7 @@ const VRAM_ADDR_IO:  u16 = 0x2007;
 const SPRITE_DMA:    u16 = 0x4014;
 
 
-/// Structure for handling the status register
+/// Structure for handling the status register of the CPU.
 pub struct StatusRegister {
     pub n: bool,
     pub v: bool,
@@ -30,6 +29,7 @@ pub struct StatusRegister {
 
 impl StatusRegister {
 
+    /// Construct a new status register object.
     pub fn new() -> Self {
         StatusRegister{
             n: false,
@@ -40,8 +40,9 @@ impl StatusRegister {
             z: false,
             c: false
         }
-}
+    }
 
+    /// Convert the fields of the status register into an unsigned 8-bit number.
     pub fn as_u8(&self) -> u8 {
         let mut num: u8 = 0;
         num |= self.c as u8;
@@ -54,6 +55,7 @@ impl StatusRegister {
         num
     }
 
+    /// Convert an unsigned 8-bit number into the flags of the status register.
     pub fn from_u8(&mut self, flags: u8) {
         self.c = (flags & 0b1u8) != 0;
         self.z = (flags & 0b10u8) != 0;
@@ -66,10 +68,10 @@ impl StatusRegister {
 }
 
 /// The memory page in which the stack is located. The stack is located from
-/// 0x0100 to 0x01FF
+/// 0x0100 to 0x01FF.
 const STACK_MEMORY_PAGE: u16 = 0x0100;
 
-/// Structure to represent the CPU of the system
+/// Structure to represent the CPU of the NES system.
 pub struct CPU {
     pub a: u8,
     pub x: u8,
@@ -81,20 +83,23 @@ pub struct CPU {
 
 impl CPU {
 
-    /// Create a new CPU with all fields zeroed
+    /// Create a new CPU with all fields zeroed.
     pub fn new() -> Self {
         CPU{a: 0, x:0, y: 0, sp: 0xFF, pc: 0, p: StatusRegister::new()}
     }
 
-    /// Perform a reset interrupt request
+    /// Perform a reset interrupt request, which involves setting the program counter to the
+    /// value stored in 0xFFFC and 0xFFFD.
     pub fn reset(&mut self, memory: &mut MainMemory) {
-	self.pc = ((CPU::mem_read(memory, 0xFFFD) as u16) << 8) | CPU::mem_read(memory, 0xFFFC) as u16
+	// we know that these values are safe to read to, so just unwrap
+	self.pc = ((memory.read(0xFFFD).unwrap() as u16) << 8) | memory.read(0xFFFC).unwrap() as u16
     }
 
-    /// Push a value onto the stack
+    /// Push a value onto the stack.
     pub fn push_stack(&mut self, memory: &mut MainMemory, val: u8) -> &Self {
         let stack_addr = STACK_MEMORY_PAGE + self.sp as u16;
-        memory.write(stack_addr, val);
+	// writing to the stack is always valid, so unwrap
+        memory.write(stack_addr, val).unwrap();
         let (new_stack_addr, underflowed) = self.sp.overflowing_sub(1);
         self.sp = new_stack_addr;
         if underflowed {
@@ -103,7 +108,7 @@ impl CPU {
         self
     }
 
-    /// Retrieve the value at the top of the stack
+    /// Retrieve the value at the top of the stack.
     pub fn pop_stack(&mut self, memory: &mut MainMemory) -> u8 {
         let (new_stack_addr, overflowed) = self.sp.overflowing_add(1);
         self.sp = new_stack_addr;
@@ -111,25 +116,32 @@ impl CPU {
             log::warn!("Stack overflow detected");
         }
         let stack_addr = STACK_MEMORY_PAGE + self.sp as u16;
-        memory.read(stack_addr) // value at the address is NOT deleted when SP moves
+	// we know reading from the stack is aways valid, so just unwrap
+        memory.read(stack_addr).unwrap() // value at the address is NOT deleted when SP moves
     }
 
-    /// Check if the given unsigned value is negative in two's complement
+    /// Check if the given unsigned value is negative in two's complement.
     pub fn check_if_neg(val: u8) -> bool {
         (val >> 7) == 1
     }
 
-    /// Get the byte at the PC and increment the PC by 1
-    pub fn read_byte_and_increment(&mut self, memory: &MainMemory) -> u8 {
-        let byte = memory.read(self.pc);
+    /// Get the byte at the PC and increment the PC by 1.
+    pub fn read_byte_and_increment(&mut self, memory: &mut MainMemory) -> Result<u8, &'static str> {
+        let byte = memory.read(self.pc)?;
         self.pc += 1;
-        byte
+        Ok(byte)
     }
 
-    /// Perform one fetch-decode-execute cycle
+    /// Perform one fetch-decode-execute cycle.
     pub fn instruction_cycle(&mut self, memory: &mut MainMemory) -> Result<(), String> {
         println!("{:x}", self.pc);
-        let opcode = self.read_byte_and_increment(memory);
+        let opcode = match self.read_byte_and_increment(memory) {
+	    Ok(op) => op,
+	    Err(e) => {
+		return Err(String::from(e));
+	    }
+	};
+	
         let instr = INSTRUCTION_TABLE.get(&opcode);
 
         let instr = match instr {
@@ -139,7 +151,7 @@ impl CPU {
             }
         };
 
-        let mut cycles = match instr {
+        let cycles = match instr {
             Instruction::ADC(mode, time) => instruction_func::adc(self, memory, mode, *time),
             Instruction::AND(mode, time) => instruction_func::and(self, memory, mode, *time),
             Instruction::ASL(mode, time) => instruction_func::asl(self, memory, mode, *time),
@@ -198,43 +210,13 @@ impl CPU {
             Instruction::TYA(mode, time) => instruction_func::tya(self, memory, mode, *time),
         };
 
+	let mut cycles = cycles?;
+
         // loop the number of cycles it took to complete the instruction
         while cycles != 0 {
             cycles -= 1;
         }
 
         Ok(())
-    }
-
-    pub fn mem_write(memory: &mut MainMemory, addr: u16, byte: u8) -> Result<(), &'static str> {
-	
-	match MainMemorySegment::get_segmentation(addr) {
-	    MainMemorySegment::ExpansionRom | MainMemorySegment::PRGROM => {
-		Err("CPU attempted to write to read only memory!")
-	    },
-	    MainMemorySegment::IORegisters(_) => {
-		if addr == 0x2002 {
-		    Err("CPU attempted to write to PPU status register!")
-		} else {
-		    Ok(memory.write(addr, byte))
-		}
-	    }
-	    _ => Ok(memory.write(addr, byte))
-	}
-    }
-
-    pub fn mem_read(memory: &mut MainMemory, addr: u16) -> u8 {
-
-	let value = memory.read(addr);
-
-	if addr == 0x2002 {
-	    // special conditions for reading PPU status.
-	    //    - Bit 7 will be cleared
-	    //    - Address latch of PPUSCROLL and PPUADDR is cleared
-	    memory.write(addr, value & 0x7F);
-	    // TODO
-	}
-
-	value
     }
 }
