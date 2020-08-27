@@ -92,7 +92,7 @@ impl CPU {
     /// value stored in 0xFFFC and 0xFFFD.
     pub fn reset(&mut self, memory: &mut MainMemory) {
 	// we know that these values are safe to read to, so just unwrap
-	self.pc = ((memory.read(0xFFFD).unwrap() as u16) << 8) | memory.read(0xFFFC).unwrap() as u16
+	self.pc = ((memory.read(0xFFFD).unwrap() as u16) << 8) | memory.read(0xFFFC).unwrap() as u16;
     }
 
     /// Push a value onto the stack.
