@@ -715,11 +715,13 @@ pub mod instruction_func {
 
 	if cpu.p.i {
 	    // If interrupt disable flag is set, don't respond to interrupt
-	    return Ok(time);
+	    return Ok(0);
 	}
 
         let pc_low_byte = (cpu.pc & 0x00FF) as u8;
         let pc_high_byte = ((cpu.pc & 0xFF00) >> 8) as u8;
+	cpu.p.b = true;
+	cpu.p.i = true;
         let flags = cpu.p.as_u8();
 
         cpu.push_stack(memory, pc_low_byte);
@@ -729,8 +731,6 @@ pub mod instruction_func {
         let irq_vector = (((memory.read(0xFFFE).unwrap() as u16) << 8) | memory.read(0xFFFF).unwrap() as u16) as u16;
 
         cpu.pc = irq_vector;
-
-        cpu.p.b = true;
         
         Ok(time)
     }
@@ -2475,7 +2475,7 @@ mod tests {
             assert_eq!(cpu.pc, 0x0000);
             assert_eq!(mem.read(0x01FF).unwrap(), 0x35);
             assert_eq!(mem.read(0x01FE).unwrap(), 0x12);
-            assert_eq!(mem.read(0x01FD).unwrap(), 0x80);
+            assert_eq!(mem.read(0x01FD).unwrap(), 0x94);
         } else {
             panic!("Wrong instruction, got {:?}", instr);
         }
