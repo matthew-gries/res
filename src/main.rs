@@ -22,5 +22,6 @@ fn main() {
     }
 
     let mut system = system::NesSystem::load_rom(&args[1]).unwrap();
+    system.reset();
     system.run();
 }

@@ -47,6 +47,14 @@ struct INESInfo {
 
 impl NesSystem {
 
+    /// Reset the system
+    pub fn reset(&mut self) {
+        let mut wait = self.cpu.reset(&mut self.memory);
+        while wait != 0 {
+            wait -= 1;
+        }
+    }
+
     /// Start the system
     pub fn run(&mut self) {
         loop {
@@ -90,7 +98,11 @@ impl NesSystem {
     }
 
     fn check_ines_format_name(header_buf: &[u8; HEADER_SIZE]) -> bool {
-        header_buf[0] == 0x4E && header_buf[1] == 0x45 && header_buf[2] == 0x53 && header_buf[3] == 0x1A
+        let n = 0x4E;
+        let e = 0x45;
+        let s = 0x53;
+        let eof = 0x1A;
+        header_buf[0] == n && header_buf[1] == e && header_buf[2] == s && header_buf[3] == eof
     }
 
     fn check_nes_2_0_format(header_buf: &[u8; HEADER_SIZE]) -> bool {
@@ -180,17 +192,23 @@ impl NesSystem {
         let mut prg_rom: Vec<u8> = vec![0; prg_rom_size];
 
         Self::read_from_rom(rom, &mut prg_rom[..])?;
+
+        let mut data: [u8; MAIN_MEMORY_MAP_ADDRESSABLE_RANGE]
+            = [0; MAIN_MEMORY_MAP_ADDRESSABLE_RANGE];
         
         for i in 0..(prg_end-prg_start) {
 
-	    let start_offset = prg_start + i;
-	    let write_address = match u16::try_from(start_offset) {
-		Err(_) => {return Err(NesSystemError::MemoryIOError("Address overflow when loading PRG_ROM"))},
-		Ok(x) => x
-	    };
-	    
-            memory.write(write_address, prg_rom[i]);
+            let start_offset = prg_start + i;
+            let write_address = match u16::try_from(start_offset) {
+                Err(_) => {return Err(NesSystemError::MemoryIOError("Address overflow when loading PRG_ROM"))},
+                Ok(x) => x
+            };
+                
+            data[write_address as usize] = prg_rom[i];
         }
+
+        // TODO: clean up this hack
+        *memory = MainMemory::from(data);
 
         Ok(())
     }
@@ -212,7 +230,7 @@ mod nes_system_error {
         SystemIOError(std::io::Error),
         UnknownFileFormat,
         UnknownMapper(u8),
-	MemoryIOError(&'static str)
+	    MemoryIOError(&'static str)
     }
 
     impl fmt::Display for NesSystemError {
@@ -225,7 +243,7 @@ mod nes_system_error {
                 NesSystemError::UnknownMapper(mapper) => {
                     write!(f, "Mapper {} is unknown or unsupported.", mapper)
                 },
-		NesSystemError::MemoryIOError(err) => write!(f, "{}", err)
+		        NesSystemError::MemoryIOError(err) => write!(f, "{}", err)
             }
         }
     }

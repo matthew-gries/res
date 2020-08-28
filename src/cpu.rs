@@ -92,66 +92,66 @@ impl CPU {
     /// value stored in 0xFFFC and 0xFFFD.
     pub fn reset(&mut self, memory: &mut MainMemory) -> usize {
 
-	// Values come from Visual6502 simulator.
-	self.a = 0;
-	self.x = 0;
-	self.y = 0;
-	self.sp = 0xFD;
-	self.p.from_u8(16 as u8);
+        // Values come from Visual6502 simulator.
+        self.a = 0;
+        self.x = 0;
+        self.y = 0;
+        self.sp = 0xFD;
+        self.p.from_u8(16 as u8);
 
-	// we know that these values are safe to read to, so just unwrap
-	self.pc = ((memory.read(0xFFFD).unwrap() as u16) << 8) | memory.read(0xFFFC).unwrap() as u16;
+        // we know that these values are safe to read to, so just unwrap
+        self.pc = ((memory.read(0xFFFD).unwrap() as u16) << 8) | memory.read(0xFFFC).unwrap() as u16;
 
-	// resets take 8 cycles
-	8
+        // resets take 8 cycles
+        8
     }
 
     /// Perform an interrupt request, which involves pushing the low and high bytes of the PC on the stack, the
     /// processor flags on the stack, disabling interrupts and setting the PC to the value stored in 0xFFFE/0xFFFF.
     pub fn irq(&mut self, memory: &mut MainMemory) -> usize {
 
-	if !self.p.i {
-	    let pc_low = (self.pc & 0x00FF) as u8;
-	    let pc_high = ((self.pc & 0xFF) >> 8) as u8;
-	    self.push_stack(memory, pc_low);
-	    self.push_stack(memory, pc_high);
-	    self.p.b = false;
-	    self.p.i = true;
-	    self.push_stack(memory, self.p.as_u8());
+        if !self.p.i {
+            let pc_low = (self.pc & 0x00FF) as u8;
+            let pc_high = ((self.pc & 0xFF) >> 8) as u8;
+            self.push_stack(memory, pc_low);
+            self.push_stack(memory, pc_high);
+            self.p.b = false;
+            self.p.i = true;
+            self.push_stack(memory, self.p.as_u8());
 
-	    let pc_low = memory.read(0xFFFE).unwrap();
-	    let pc_high = memory.read(0xFFFF).unwrap();
+            let pc_low = memory.read(0xFFFE).unwrap();
+            let pc_high = memory.read(0xFFFF).unwrap();
 
-	    self.pc = ((pc_high as u16) << 8) | pc_low as u16;
+            self.pc = ((pc_high as u16) << 8) | pc_low as u16;
 
-	    // IRQ take 7 cycles
-	    7
-	} else {
-	    // if we ignored the request, we didn't use any cycles
-	    0
-	}
+            // IRQ take 7 cycles
+            7
+        } else {
+            // if we ignored the request, we didn't use any cycles
+            0
+        }
     }
 
     /// Perform a non-maskable interrupt, which involves pushing the low and high bytes of the PC on the stack, the
     /// processor flags on the stack, disabling interrupts and setting the PC to the value stored in 0xFFFA/0xFFFB.
     pub fn nmi(&mut self, memory: &mut MainMemory) -> usize {
 
-	let pc_low = (self.pc & 0x00FF) as u8;
-	let pc_high = ((self.pc & 0xFF) >> 8) as u8;
-	self.push_stack(memory, pc_low);
-	self.push_stack(memory, pc_high);
-	self.push_stack(memory, self.p.as_u8());
+        let pc_low = (self.pc & 0x00FF) as u8;
+        let pc_high = ((self.pc & 0xFF) >> 8) as u8;
+        self.push_stack(memory, pc_low);
+        self.push_stack(memory, pc_high);
+        self.push_stack(memory, self.p.as_u8());
 
-	self.p.i = true;
-	self.p.b = false;
+        self.p.i = true;
+        self.p.b = false;
 
-	let pc_low = memory.read(0xFFFA).unwrap();
-	let pc_high = memory.read(0xFFFB).unwrap();
+        let pc_low = memory.read(0xFFFA).unwrap();
+        let pc_high = memory.read(0xFFFB).unwrap();
 
-	self.pc = ((pc_high as u16) << 8) | pc_low as u16;
+        self.pc = ((pc_high as u16) << 8) | pc_low as u16;
 
-	// NMIs take 7 cycles
-	8
+        // NMIs take 7 cycles
+        7
     }
 
     /// Push a value onto the stack.
@@ -195,11 +195,11 @@ impl CPU {
     pub fn instruction_cycle(&mut self, memory: &mut MainMemory) -> Result<(), String> {
         println!("{:x}", self.pc);
         let opcode = match self.read_byte_and_increment(memory) {
-	    Ok(op) => op,
-	    Err(e) => {
-		return Err(String::from(e));
-	    }
-	};
+            Ok(op) => op,
+            Err(e) => {
+            return Err(String::from(e));
+            }
+        };
 	
         let instr = INSTRUCTION_TABLE.get(&opcode);
 
@@ -269,7 +269,7 @@ impl CPU {
             Instruction::TYA(mode, time) => instruction_func::tya(self, memory, mode, *time),
         };
 
-	let mut cycles = cycles?;
+        let mut cycles = cycles?;
 
         // loop the number of cycles it took to complete the instruction
         while cycles != 0 {

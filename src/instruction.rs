@@ -713,15 +713,15 @@ pub mod instruction_func {
             _ => panic!("Unsupported addressing mode {:?} for BRK", *mode),
         };
 
-	if cpu.p.i {
-	    // If interrupt disable flag is set, don't respond to interrupt
-	    return Ok(0);
-	}
+        if cpu.p.i {
+            // If interrupt disable flag is set, don't respond to interrupt
+            return Ok(0);
+        }
 
         let pc_low_byte = (cpu.pc & 0x00FF) as u8;
         let pc_high_byte = ((cpu.pc & 0xFF00) >> 8) as u8;
-	cpu.p.b = true;
-	cpu.p.i = true;
+        cpu.p.b = true;
+        cpu.p.i = true;
         let flags = cpu.p.as_u8();
 
         cpu.push_stack(memory, pc_low_byte);
