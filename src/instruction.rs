@@ -378,6 +378,15 @@ pub mod instruction_func {
 
     use super::*;
 
+    // Sign extend an unsigned 8 bit to an unsigned 16-bit, mostly a helper for branching instructions
+    fn sign_extend(x: u8) -> u16 {
+        if (x >> 7) == 1 {
+            (x as u16) | 0xFF00
+        } else {
+            x as u16
+        } 
+    }
+
     /// Run an ADC instruction and return the number of cycles it took to complete the instruction
     pub fn adc(cpu: &mut CPU, memory: &mut MainMemory, mode: &AddressingMode, time: usize) -> Result<usize, &'static str> {
 
@@ -534,12 +543,12 @@ pub mod instruction_func {
             _ => panic!("Unsupported addressing mode {:?} for BEQ", *mode),
         };
 
-        let operand = operand as u16;
-
         let extra_cycles = {
             if cpu.p.z {
                 let old_pc = cpu.pc;
-                cpu.pc = cpu.pc + operand;
+                let operand = sign_extend(operand as u8);
+                let (new_pc, _) = cpu.pc.overflowing_add(operand);
+                cpu.pc = new_pc;
                 if MainMemory::check_if_page_crossed(old_pc, cpu.pc) {
                     2 
                 } else {
@@ -561,12 +570,12 @@ pub mod instruction_func {
             _ => panic!("Unsupported addressing mode {:?} for BNE", *mode),
         };
 
-        let operand = operand as u16;
-
         let extra_cycles = {
             if !cpu.p.z {
                 let old_pc = cpu.pc;
-                cpu.pc = cpu.pc + operand;
+                let operand = sign_extend(operand as u8);
+                let (new_pc, _) = cpu.pc.overflowing_add(operand);
+                cpu.pc = new_pc;
                 if MainMemory::check_if_page_crossed(old_pc, cpu.pc) {
                     2 
                 } else {
@@ -588,12 +597,12 @@ pub mod instruction_func {
             _ => panic!("Unsupported addressing mode {:?} for BMI", *mode),
         };
 
-        let operand = operand as u16;
-
         let extra_cycles = {
             if cpu.p.n {
                 let old_pc = cpu.pc;
-                cpu.pc = cpu.pc + operand;
+                let operand = sign_extend(operand as u8);
+                let (new_pc, _) = cpu.pc.overflowing_add(operand);
+                cpu.pc = new_pc;
                 if MainMemory::check_if_page_crossed(old_pc, cpu.pc) {
                     2 
                 } else {
@@ -615,12 +624,12 @@ pub mod instruction_func {
             _ => panic!("Unsupported addressing mode {:?} for BPL", *mode),
         };
 
-        let operand = operand as u16;
-
         let extra_cycles = {
             if !cpu.p.n {
                 let old_pc = cpu.pc;
-                cpu.pc = cpu.pc + operand;
+                let operand = sign_extend(operand as u8);
+                let (new_pc, _) = cpu.pc.overflowing_add(operand);
+                cpu.pc = new_pc;
                 if MainMemory::check_if_page_crossed(old_pc, cpu.pc) {
                     2 
                 } else {
@@ -642,12 +651,12 @@ pub mod instruction_func {
             _ => panic!("Unsupported addressing mode {:?} for BVC", *mode),
         };
 
-        let operand = operand as u16;
-
         let extra_cycles = {
             if !cpu.p.v {
                 let old_pc = cpu.pc;
-                cpu.pc = cpu.pc + operand;
+                let operand = sign_extend(operand as u8);
+                let (new_pc, _) = cpu.pc.overflowing_add(operand);
+                cpu.pc = new_pc;
                 if MainMemory::check_if_page_crossed(old_pc, cpu.pc) {
                     2 
                 } else {
@@ -669,12 +678,12 @@ pub mod instruction_func {
             _ => panic!("Unsupported addressing mode {:?} for BVS", *mode),
         };
 
-        let operand = operand as u16;
-
         let extra_cycles = {
             if cpu.p.v {
                 let old_pc = cpu.pc;
-                cpu.pc = cpu.pc + operand;
+                let operand = sign_extend(operand as u8);
+                let (new_pc, _) = cpu.pc.overflowing_add(operand);
+                cpu.pc = new_pc;
                 if MainMemory::check_if_page_crossed(old_pc, cpu.pc) {
                     2 
                 } else {

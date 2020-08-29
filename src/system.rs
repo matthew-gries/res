@@ -182,10 +182,6 @@ impl NesSystem {
             }
         };
         
-        // for now, just load in the program rom
-        let prg_start = map.cpu_rom_bank_start as usize;
-        let prg_end = (map.cpu_rom_bank_end as usize) + 1;
-
         let prg_rom_size = 16384 * prg_rom_bytes;
 
         // dynamically allocate buffer
@@ -195,16 +191,20 @@ impl NesSystem {
 
         let mut data: [u8; MAIN_MEMORY_MAP_ADDRESSABLE_RANGE]
             = [0; MAIN_MEMORY_MAP_ADDRESSABLE_RANGE];
-        
-        for i in 0..(prg_end-prg_start) {
 
-            let start_offset = prg_start + i;
-            let write_address = match u16::try_from(start_offset) {
-                Err(_) => {return Err(NesSystemError::MemoryIOError("Address overflow when loading PRG_ROM"))},
-                Ok(x) => x
-            };
-                
-            data[write_address as usize] = prg_rom[i];
+        let prg_start = 0x8000;
+        
+        for i in 0..(0x8000/prg_rom_size) { // gives the number of times the program rom needs to be mirrored
+            for j in 0..prg_rom_size {
+
+                let start_offset = (prg_start + (prg_rom_size * i)) + j;
+                let write_address = match u16::try_from(start_offset) {
+                    Err(_) => {return Err(NesSystemError::MemoryIOError("Address overflow when loading PRG_ROM"))},
+                    Ok(x) => x
+                };
+                    
+                data[write_address as usize] = prg_rom[j];
+            }
         }
 
         // TODO: clean up this hack

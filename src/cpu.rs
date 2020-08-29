@@ -197,7 +197,7 @@ impl CPU {
         let opcode = match self.read_byte_and_increment(memory) {
             Ok(op) => op,
             Err(e) => {
-            return Err(String::from(e));
+                return Err(String::from(e));
             }
         };
 	
