@@ -489,12 +489,12 @@ pub mod instruction_func {
             _ => panic!("Unsupported addressing mode {:?} for BCC", *mode),
         };
 
-        let operand = operand as u16;
-
         let extra_cycles = {
             if !cpu.p.c {
                 let old_pc = cpu.pc;
-                cpu.pc = cpu.pc + operand;
+                let operand = sign_extend(operand as u8);
+                let (new_pc, _) = cpu.pc.overflowing_add(operand);
+                cpu.pc = new_pc;
                 if MainMemory::check_if_page_crossed(old_pc, cpu.pc) {
                     2 
                 } else {
@@ -516,12 +516,13 @@ pub mod instruction_func {
             _ => panic!("Unsupported addressing mode {:?} for BCS", *mode),
         };
 
-        let operand = operand as u16;
 
         let extra_cycles = {
             if cpu.p.c {
                 let old_pc = cpu.pc;
-                cpu.pc = cpu.pc + operand;
+                let operand = sign_extend(operand as u8);
+                let (new_pc, _) = cpu.pc.overflowing_add(operand);
+                cpu.pc = new_pc;
                 if MainMemory::check_if_page_crossed(old_pc, cpu.pc) {
                     2 
                 } else {
@@ -1840,14 +1841,14 @@ mod tests {
     #[test]
     fn bcc_neg_offset_same_page_test() {
         let (mut cpu, mut mem) = generate_cpu_and_mem();
-        cpu.pc = 0x7F00;
-        mem.write(0x7F00, 0x90).unwrap();
-        mem.write(0x7F01, 0xFD).unwrap();
+        cpu.pc = 0x7F01;
+        mem.write(0x7F01, 0x90).unwrap();
+        mem.write(0x7F02, 0xFD).unwrap();
         let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut mem).unwrap()).unwrap();
         if let Instruction::BCC(mode, time) = instr {
             let cycles = instruction_func::bcc(&mut cpu, &mut mem, mode, *time).unwrap();
             assert_eq!(cycles, 3);
-            assert_eq!(cpu.pc, 0x7FFF);
+            assert_eq!(cpu.pc, 0x7F00);
         } else {
             panic!("Wrong instruction, got {:?}", instr);
         }
@@ -1856,14 +1857,14 @@ mod tests {
     #[test]
     fn bcc_neg_offset_diff_page_test() {
         let (mut cpu, mut mem) = generate_cpu_and_mem();
-        cpu.pc = 0x7FFD;
-        mem.write(0x7FFD, 0x90).unwrap();
-        mem.write(0x7FFE, 0xFF).unwrap();
+        cpu.pc = 0x7F00;
+        mem.write(0x7F00, 0x90).unwrap();
+        mem.write(0x7F01, 0xFD).unwrap();
         let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut mem).unwrap()).unwrap();
         if let Instruction::BCC(mode, time) = instr {
             let cycles = instruction_func::bcc(&mut cpu, &mut mem, mode, *time).unwrap();
             assert_eq!(cycles, 4);
-            assert_eq!(cpu.pc, 0x80FE);
+            assert_eq!(cpu.pc, 0x7EFF);
         } else {
             panic!("Wrong instruction, got {:?}", instr);
         }
@@ -1922,14 +1923,14 @@ mod tests {
     fn bcs_neg_offset_same_page_test() {
         let (mut cpu, mut mem) = generate_cpu_and_mem();
         cpu.p.c = true;
-        cpu.pc = 0x7F00;
-        mem.write(0x7F00, 0xB0).unwrap();
-        mem.write(0x7F01, 0xFD).unwrap();
+        cpu.pc = 0x7F01;
+        mem.write(0x7F01, 0xB0).unwrap();
+        mem.write(0x7F02, 0xFD).unwrap();
         let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut mem).unwrap()).unwrap();
         if let Instruction::BCS(mode, time) = instr {
             let cycles = instruction_func::bcs(&mut cpu, &mut mem, mode, *time).unwrap();
             assert_eq!(cycles, 3);
-            assert_eq!(cpu.pc, 0x7FFF);
+            assert_eq!(cpu.pc, 0x7F00);
         } else {
             panic!("Wrong instruction, got {:?}", instr);
         }
@@ -1939,14 +1940,14 @@ mod tests {
     fn bcs_neg_offset_diff_page_test() {
         let (mut cpu, mut mem) = generate_cpu_and_mem();
         cpu.p.c = true;
-        cpu.pc = 0x7FFD;
-        mem.write(0x7FFD, 0xB0).unwrap();
-        mem.write(0x7FFE, 0xFF).unwrap();
+        cpu.pc = 0x7F00;
+        mem.write(0x7F00, 0xB0).unwrap();
+        mem.write(0x7F01, 0xFD).unwrap();
         let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut mem).unwrap()).unwrap();
         if let Instruction::BCS(mode, time) = instr {
             let cycles = instruction_func::bcs(&mut cpu, &mut mem, mode, *time).unwrap();
             assert_eq!(cycles, 4);
-            assert_eq!(cpu.pc, 0x80FE);
+            assert_eq!(cpu.pc, 0x7EFF);
         } else {
             panic!("Wrong instruction, got {:?}", instr);
         }
@@ -2005,14 +2006,14 @@ mod tests {
     fn beq_neg_offset_same_page_test() {
         let (mut cpu, mut mem) = generate_cpu_and_mem();
         cpu.p.z = true;
-        cpu.pc = 0x7F00;
-        mem.write(0x7F00, 0xF0).unwrap();
-        mem.write(0x7F01, 0xFD).unwrap();
+        cpu.pc = 0x7F01;
+        mem.write(0x7F01, 0xF0).unwrap();
+        mem.write(0x7F02, 0xFD).unwrap();
         let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut mem).unwrap()).unwrap();
         if let Instruction::BEQ(mode, time) = instr {
             let cycles = instruction_func::beq(&mut cpu, &mut mem, mode, *time).unwrap();
             assert_eq!(cycles, 3);
-            assert_eq!(cpu.pc, 0x7FFF);
+            assert_eq!(cpu.pc, 0x7F00);
         } else {
             panic!("Wrong instruction, got {:?}", instr);
         }
@@ -2022,14 +2023,14 @@ mod tests {
     fn beq_neg_offset_diff_page_test() {
         let (mut cpu, mut mem) = generate_cpu_and_mem();
         cpu.p.z = true;
-        cpu.pc = 0x7FFD;
-        mem.write(0x7FFD, 0xF0).unwrap();
-        mem.write(0x7FFE, 0xFF).unwrap();
+        cpu.pc = 0x7F00;
+        mem.write(0x7F00, 0xF0).unwrap();
+        mem.write(0x7F01, 0xFD).unwrap();
         let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut mem).unwrap()).unwrap();
         if let Instruction::BEQ(mode, time) = instr {
             let cycles = instruction_func::beq(&mut cpu, &mut mem, mode, *time).unwrap();
             assert_eq!(cycles, 4);
-            assert_eq!(cpu.pc, 0x80FE);
+            assert_eq!(cpu.pc, 0x7EFF);
         } else {
             panic!("Wrong instruction, got {:?}", instr);
         }
@@ -2088,14 +2089,14 @@ mod tests {
     fn bne_neg_offset_same_page_test() {
         let (mut cpu, mut mem) = generate_cpu_and_mem();
         cpu.p.z = false;
-        cpu.pc = 0x7F00;
-        mem.write(0x7F00, 0xD0).unwrap();
-        mem.write(0x7F01, 0xFD).unwrap();
+        cpu.pc = 0x7F01;
+        mem.write(0x7F01, 0xD0).unwrap();
+        mem.write(0x7F02, 0xFD).unwrap();
         let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut mem).unwrap()).unwrap();
         if let Instruction::BNE(mode, time) = instr {
             let cycles = instruction_func::bne(&mut cpu, &mut mem, mode, *time).unwrap();
             assert_eq!(cycles, 3);
-            assert_eq!(cpu.pc, 0x7FFF);
+            assert_eq!(cpu.pc, 0x7F00);
         } else {
             panic!("Wrong instruction, got {:?}", instr);
         }
@@ -2105,14 +2106,14 @@ mod tests {
     fn bne_neg_offset_diff_page_test() {
         let (mut cpu, mut mem) = generate_cpu_and_mem();
         cpu.p.z = false;
-        cpu.pc = 0x7FFD;
-        mem.write(0x7FFD, 0xD0).unwrap();
-        mem.write(0x7FFE, 0xFF).unwrap();
+        cpu.pc = 0x7F00;
+        mem.write(0x7F00, 0xD0).unwrap();
+        mem.write(0x7F01, 0xFD).unwrap();
         let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut mem).unwrap()).unwrap();
         if let Instruction::BNE(mode, time) = instr {
             let cycles = instruction_func::bne(&mut cpu, &mut mem, mode, *time).unwrap();
             assert_eq!(cycles, 4);
-            assert_eq!(cpu.pc, 0x80FE);
+            assert_eq!(cpu.pc, 0x7EFF);
         } else {
             panic!("Wrong instruction, got {:?}", instr);
         }
@@ -2171,14 +2172,14 @@ mod tests {
     fn bmi_neg_offset_same_page_test() {
         let (mut cpu, mut mem) = generate_cpu_and_mem();
         cpu.p.n = true;
-        cpu.pc = 0x7F00;
-        mem.write(0x7F00, 0x30).unwrap();
-        mem.write(0x7F01, 0xFD).unwrap();
+        cpu.pc = 0x7F01;
+        mem.write(0x7F01, 0x30).unwrap();
+        mem.write(0x7F02, 0xFD).unwrap();
         let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut mem).unwrap()).unwrap();
         if let Instruction::BMI(mode, time) = instr {
             let cycles = instruction_func::bmi(&mut cpu, &mut mem, mode, *time).unwrap();
             assert_eq!(cycles, 3);
-            assert_eq!(cpu.pc, 0x7FFF);
+            assert_eq!(cpu.pc, 0x7F00);
         } else {
             panic!("Wrong instruction, got {:?}", instr);
         }
@@ -2188,14 +2189,14 @@ mod tests {
     fn bmi_neg_offset_diff_page_test() {
         let (mut cpu, mut mem) = generate_cpu_and_mem();
         cpu.p.n = true;
-        cpu.pc = 0x7FFD;
-        mem.write(0x7FFD, 0x30).unwrap();
-        mem.write(0x7FFE, 0xFF).unwrap();
+        cpu.pc = 0x7F00;
+        mem.write(0x7F00, 0x30).unwrap();
+        mem.write(0x7F01, 0xFD).unwrap();
         let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut mem).unwrap()).unwrap();
         if let Instruction::BMI(mode, time) = instr {
             let cycles = instruction_func::bmi(&mut cpu, &mut mem, mode, *time).unwrap();
             assert_eq!(cycles, 4);
-            assert_eq!(cpu.pc, 0x80FE);
+            assert_eq!(cpu.pc, 0x7EFF);
         } else {
             panic!("Wrong instruction, got {:?}", instr);
         }
@@ -2254,14 +2255,14 @@ mod tests {
     fn bpl_neg_offset_same_page_test() {
         let (mut cpu, mut mem) = generate_cpu_and_mem();
         cpu.p.n = false;
-        cpu.pc = 0x7F00;
-        mem.write(0x7F00, 0x10).unwrap();
-        mem.write(0x7F01, 0xFD).unwrap();
+        cpu.pc = 0x7F01;
+        mem.write(0x7F01, 0x10).unwrap();
+        mem.write(0x7F02, 0xFD).unwrap();
         let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut mem).unwrap()).unwrap();
         if let Instruction::BPL(mode, time) = instr {
             let cycles = instruction_func::bpl(&mut cpu, &mut mem, mode, *time).unwrap();
             assert_eq!(cycles, 3);
-            assert_eq!(cpu.pc, 0x7FFF);
+            assert_eq!(cpu.pc, 0x7F00);
         } else {
             panic!("Wrong instruction, got {:?}", instr);
         }
@@ -2271,14 +2272,14 @@ mod tests {
     fn bpl_neg_offset_diff_page_test() {
         let (mut cpu, mut mem) = generate_cpu_and_mem();
         cpu.p.n = false;
-        cpu.pc = 0x7FFD;
-        mem.write(0x7FFD, 0x10).unwrap();
-        mem.write(0x7FFE, 0xFF).unwrap();
+        cpu.pc = 0x7F00;
+        mem.write(0x7F00, 0x10).unwrap();
+        mem.write(0x7F01, 0xFD).unwrap();
         let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut mem).unwrap()).unwrap();
         if let Instruction::BPL(mode, time) = instr {
             let cycles = instruction_func::bpl(&mut cpu, &mut mem, mode, *time).unwrap();
             assert_eq!(cycles, 4);
-            assert_eq!(cpu.pc, 0x80FE);
+            assert_eq!(cpu.pc, 0x7EFF);
         } else {
             panic!("Wrong instruction, got {:?}", instr);
         }
@@ -2337,14 +2338,14 @@ mod tests {
     fn bvc_neg_offset_same_page_test() {
         let (mut cpu, mut mem) = generate_cpu_and_mem();
         cpu.p.v = false;
-        cpu.pc = 0x7F00;
-        mem.write(0x7F00, 0x50).unwrap();
-        mem.write(0x7F01, 0xFD).unwrap();
+        cpu.pc = 0x7F01;
+        mem.write(0x7F01, 0x50).unwrap();
+        mem.write(0x7F02, 0xFD).unwrap();
         let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut mem).unwrap()).unwrap();
         if let Instruction::BVC(mode, time) = instr {
             let cycles = instruction_func::bvc(&mut cpu, &mut mem, mode, *time).unwrap();
             assert_eq!(cycles, 3);
-            assert_eq!(cpu.pc, 0x7FFF);
+            assert_eq!(cpu.pc, 0x7F00);
         } else {
             panic!("Wrong instruction, got {:?}", instr);
         }
@@ -2354,14 +2355,14 @@ mod tests {
     fn bvc_neg_offset_diff_page_test() {
         let (mut cpu, mut mem) = generate_cpu_and_mem();
         cpu.p.v = false;
-        cpu.pc = 0x7FFD;
-        mem.write(0x7FFD, 0x50).unwrap();
-        mem.write(0x7FFE, 0xFF).unwrap();
+        cpu.pc = 0x7F00;
+        mem.write(0x7F00, 0x50).unwrap();
+        mem.write(0x7F01, 0xFD).unwrap();
         let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut mem).unwrap()).unwrap();
         if let Instruction::BVC(mode, time) = instr {
             let cycles = instruction_func::bvc(&mut cpu, &mut mem, mode, *time).unwrap();
             assert_eq!(cycles, 4);
-            assert_eq!(cpu.pc, 0x80FE);
+            assert_eq!(cpu.pc, 0x7EFF);
         } else {
             panic!("Wrong instruction, got {:?}", instr);
         }
@@ -2420,14 +2421,14 @@ mod tests {
     fn bvs_neg_offset_same_page_test() {
         let (mut cpu, mut mem) = generate_cpu_and_mem();
         cpu.p.v = true;
-        cpu.pc = 0x7F00;
-        mem.write(0x7F00, 0x70).unwrap();
-        mem.write(0x7F01, 0xFD).unwrap();
+        cpu.pc = 0x7F01;
+        mem.write(0x7F01, 0x70).unwrap();
+        mem.write(0x7F02, 0xFD).unwrap();
         let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut mem).unwrap()).unwrap();
         if let Instruction::BVS(mode, time) = instr {
             let cycles = instruction_func::bvs(&mut cpu, &mut mem, mode, *time).unwrap();
             assert_eq!(cycles, 3);
-            assert_eq!(cpu.pc, 0x7FFF);
+            assert_eq!(cpu.pc, 0x7F00);
         } else {
             panic!("Wrong instruction, got {:?}", instr);
         }
@@ -2437,14 +2438,14 @@ mod tests {
     fn bvs_neg_offset_diff_page_test() {
         let (mut cpu, mut mem) = generate_cpu_and_mem();
         cpu.p.v = true;
-        cpu.pc = 0x7FFD;
-        mem.write(0x7FFD, 0x70).unwrap();
-        mem.write(0x7FFE, 0xFF).unwrap();
+        cpu.pc = 0x7F00;
+        mem.write(0x7F00, 0x70).unwrap();
+        mem.write(0x7F01, 0xFD).unwrap();
         let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut mem).unwrap()).unwrap();
         if let Instruction::BVS(mode, time) = instr {
             let cycles = instruction_func::bvs(&mut cpu, &mut mem, mode, *time).unwrap();
             assert_eq!(cycles, 4);
-            assert_eq!(cpu.pc, 0x80FE);
+            assert_eq!(cpu.pc, 0x7EFF);
         } else {
             panic!("Wrong instruction, got {:?}", instr);
         }
