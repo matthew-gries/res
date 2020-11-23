@@ -4,6 +4,7 @@ extern crate lazy_static;
 extern crate log;
 
 mod cpu;
+mod ppu;
 mod mapper;
 mod memory;
 mod main_memory;

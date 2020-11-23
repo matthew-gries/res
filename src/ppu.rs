@@ -1,20 +1,29 @@
-pub use memory::Memory;
-pub use main_memory::MainMemory;
-pub use video_memory::VideoMemory;
+pub use crate::memory::Memory;
+pub use crate::main_memory::MainMemory;
+pub use crate::video_memory::VideoMemory;
 
 use std::collections::HashMap;
 
-const NAMETABLE_HEIGHT   : usize = 32;
-const NAMETABLE_WIDTH    : usize = 30;
-const PALETTE_HEIGHT     : usize = 8;
-const PALETTE_WIDTH      : usize = 8;
-const SYSTEM_PALETTE_ROW : usize = 4;
-const SYSTEM_PALETTE_COL : usize = 16;
-const IMAGE_PALETTE_SIZE : usize = 16;
-const SPRITE_PALETTE_SIZE: usize = 16;
+const NAMETABLE_HEIGHT       : usize = 32;
+const NAMETABLE_WIDTH        : usize = 30;
+const PALETTE_HEIGHT         : usize = 8;
+const PALETTE_WIDTH          : usize = 8;
+const SYSTEM_PALETTE_ROW     : usize = 4;
+const SYSTEM_PALETTE_COL     : usize = 16;
+const IMAGE_PALETTE_SIZE     : usize = 16;
+const SPRITE_PALETTE_SIZE    : usize = 16;
+const PATTERN_TILE_COUNT     : usize = 256;
 
-const IMAGE_PALETTE_ADDR : u16   = 0x3F00;
-const SPRITE_PALETTE_ADDR: u16   = 0x3F10;
+const IMAGE_PALETTE_ADDR     : u16   = 0x3F00;
+const SPRITE_PALETTE_ADDR    : u16   = 0x3F10;
+const PATTERN_TABLE_START    : u16   = 0x0000;
+const PATTERN_TABLE_END      : u16   = 0x2000;
+const PATTERN_TABLE_LEN      : u16   = 0x1000;
+const NAME_TABLE_ZERO_START  : u16   = 0x2000;
+const NAME_TABLE_ONE_START   : u16   = 0x2400;
+const NAME_TABLE_TWO_START   : u16   = 0x2800;
+const NAME_TABLE_THREE_START : u16   = 0x2C00;
+const NAME_TABLE_LEN         : u16   = 0x3F0;
 
 lazy_static! {
     // a mapping between the byte used in the image and sprite palettes and the colors the bytes
@@ -88,6 +97,42 @@ lazy_static! {
         map.insert(0x3F, 0x080808);
 
         map
+    };
+}
+
+/// Representation of the different pattern tables in the PPU memory map.
+pub enum PatternTableSegment {
+    Zero,
+    One
+}
+
+impl PatternTableSegment {
+    /// Get the start (inclusive) and end (exclusive) indices of the pattern table
+    pub fn range(self) -> (u16, u16) {
+        match self {
+            PatternTableSegment::Zero => (PATTERN_TABLE_START, PATTERN_TABLE_START + PATTERN_TABLE_LEN),
+            PatternTableSegment::One  => (PATTERN_TABLE_START + PATTERN_TABLE_LEN, PATTERN_TABLE_END)
+        }
+    }
+}
+
+/// Representation of the different name tables in the PPU memory map.
+pub enum NameTableSegment {
+    Zero,
+    One,
+    Two,
+    Three
+}
+
+impl NameTableSegment {
+    /// Get the start (inclusive) and end (exclusive) indices of the name table. 
+    pub fn range(self) -> (u16, u16) {
+        match self {
+            NameTableSegment::Zero  => (NAME_TABLE_ZERO_START, NAME_TABLE_ZERO_START + NAME_TABLE_LEN),
+            NameTableSegment::One   => (NAME_TABLE_ONE_START, NAME_TABLE_ONE_START + NAME_TABLE_LEN),
+            NameTableSegment::Two   => (NAME_TABLE_TWO_START, NAME_TABLE_TWO_START + NAME_TABLE_LEN),
+            NameTableSegment::Three => (NAME_TABLE_THREE_START, NAME_TABLE_THREE_START + NAME_TABLE_LEN),
+        }
     }
 }
 
@@ -95,17 +140,17 @@ lazy_static! {
 pub type RenderedScreen = [[u8; NAMETABLE_WIDTH*PALETTE_WIDTH]; NAMETABLE_HEIGHT*PALETTE_HEIGHT];
 
 /// Undergo one PPU cycle and render the screen given the data in the CPU memory and PPU memory.
-pub fn render_screen(cpu_mem: &MainMemory, ppu_mem: &VideoMemory) -> RenderedScreen {
+pub fn render_screen(cpu_mem: &MainMemory, ppu_mem: &mut VideoMemory) -> RenderedScreen {
 
-    let pattern_table: BackgroundPattern = generate_background_patterns(cpu_mem, ppu_mem);
+    let pattern_table: BackgroundPattern = generate_background_patterns(ppu_mem);
 
     let mut screen: RenderedScreen = [[0; NAMETABLE_WIDTH*PALETTE_WIDTH]; NAMETABLE_HEIGHT*PALETTE_HEIGHT];
 
-    for tile_row in pattern_table.len() {
-        for tile_col in pattern_table[0].len() {
+    for tile_row in 0..pattern_table.len() {
+        for tile_col in 0..pattern_table[0].len() {
             let tile = pattern_table[tile_row][tile_col];
-            for pixel_row in tile.len() {
-                for pixel_col in tile[0].len() {
+            for pixel_row in 0..tile.len() {
+                for pixel_col in 0..tile[0].len() {
                     screen[pixel_row + tile_row * NAMETABLE_HEIGHT][pixel_col + tile_col * NAMETABLE_WIDTH]
                         = tile[pixel_row][pixel_col];
                 }
@@ -114,24 +159,82 @@ pub fn render_screen(cpu_mem: &MainMemory, ppu_mem: &VideoMemory) -> RenderedScr
     }
 
     // TODO: sprites
-    Ok(screen)
+    screen
 }
 
-// An 8x8 pixel pattern tile
+// An 8x8 pixel pattern tile. Each value in this table should be 0-3, inclusive
 type Pattern = [[u8; PALETTE_WIDTH]; PALETTE_HEIGHT];
 
+// A list of patterns for a page in memory (either 0x0000 - 0x1000 or 0x1000 - 0x2000)
+type PatternTable = [Pattern; PATTERN_TILE_COUNT];
+
 // The 32x30 pattern tile backgrounds
-type BackgroundPattern = [[Pattern; NAMETABLE_WIDTH]; NAMETABLE_HEIGHT];
+type BackgroundTileGrid = [[Pattern; NAMETABLE_WIDTH]; NAMETABLE_HEIGHT];
 
 // Image and sprite palettes
 type ImagePalette  = [u8; IMAGE_PALETTE_SIZE];
 type SpritePalette = [u8; SPRITE_PALETTE_SIZE];
 
-// generate tiles into a background tile grid 
-fn generate_background_patterns(cpu_mem: &MainMemory, ppu_mem: &VideoMemory) -> BackgroundPattern {
-    [[[[0; PALETTE_WIDTH]; PALETTE_HEIGHT]; NAMETABLE_WIDTH]; NAMETABLE_HEIGHT]
+// generate tiles into a background tile grid
+fn generate_background_patterns(ppu_mem: &mut VideoMemory, pattern_page: PatternTableSegment, nametable_page: NameTableSegment) -> BackgroundTileGrid {
+    let patterns = generate_pattern_tiles(ppu_mem, pattern_page);
+    let mut background = [[[[0; PALETTE_WIDTH]; PALETTE_HEIGHT]; NAMETABLE_WIDTH]; NAMETABLE_HEIGHT];
+
+    let (start, end) = nametable_page.range();
+    let mut nametable_mem_idx = start;
+
+    for i in 0..NAMETABLE_WIDTH {
+        for j in 0..NAMETABLE_HEIGHT {
+            let idx = ppu_mem.read(nametable_mem_idx).unwrap() as usize;
+            background[i][j] = patterns[idx].clone();
+        }
+    }
+
+    background
 }
 
+// generate an 8x8 pattern tile
+fn generate_tile(ppu_mem: &mut VideoMemory, index: usize) -> Pattern {
+
+    if index % 16 != 0 {
+        panic!("Index not divisible by 0xF");
+    }
+    
+    let mut pattern = [[0; PALETTE_WIDTH]; PALETTE_HEIGHT];
+
+    // for every row of the tile
+    for i in index..(index + 8) {
+        let left = ppu_mem.read(i as u16).unwrap();
+        let right = ppu_mem.read((i as u16) + 8).unwrap();
+
+        // for every column of the tile (i.e. bit of each number loaded from pattern table)
+        for j in 0..8 {
+            let left_bit = left & (1 << j);
+            let right_bit = right & (1 << j);
+
+            let val = (left_bit << 1) | right_bit;
+
+            pattern[i - index][j] = val;
+        }
+    }
+
+    pattern
+}
+
+// go through the pattern tables and return a list of pattern tiles, from 0x0000 to 0x2000
+fn generate_pattern_tiles(ppu_mem: &mut VideoMemory, page: PatternTableSegment) -> PatternTable {
+
+    let mut pattern_table = [[[0; PALETTE_WIDTH]; PALETTE_HEIGHT]; PATTERN_TILE_COUNT];
+    let (start, end) = page.range();
+
+    for (pattern_idx, table_idx) in (start..end).step_by(0x10).enumerate() {
+        pattern_table[table_idx as usize] = generate_tile(ppu_mem, pattern_idx);
+    }
+
+    pattern_table
+}
+
+// Return the image palette currently in memory.
 fn get_image_palette(ppu_mem: &mut VideoMemory) -> ImagePalette {
     let mut palette = [0; IMAGE_PALETTE_SIZE];
 
@@ -140,4 +243,15 @@ fn get_image_palette(ppu_mem: &mut VideoMemory) -> ImagePalette {
     }
 
     palette
+}
+
+#[cfg(test)]
+mod tests {
+
+    use super::*;
+
+    #[test]
+    fn test_background() {
+
+    }
 }
