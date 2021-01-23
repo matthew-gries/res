@@ -16,20 +16,29 @@ const VRAM_ADDR_IO:  u16 = 0x2007;
 const SPRITE_DMA:    u16 = 0x4014;
 
 
-/// Structure for handling the status register of the CPU.
+/// Structure for handling the status register of the CPU
 pub struct StatusRegister {
+    /// The negative flag (bit 7)
     pub n: bool,
+    /// The overflow flag (bit 6)
     pub v: bool,
+    /// The break command flag (bit 4)
     pub b: bool,
+    /// The decimal mode flag (unused in NES system, bit 3)
     pub d: bool,
+    /// The interrupt disable flag (bit 2)
     pub i: bool,
+    /// The zero flag (bit 1)
     pub z: bool,
+    /// The carry flag (bit 0)
     pub c: bool
 }
 
 impl StatusRegister {
 
-    /// Construct a new status register object.
+    /// Construct a new status register object
+    /// 
+    /// Return (`StatusRegister`): the new status register object
     pub fn new() -> Self {
         StatusRegister{
             n: false,
@@ -42,7 +51,10 @@ impl StatusRegister {
         }
     }
 
-    /// Convert the fields of the status register into an unsigned 8-bit number.
+    /// Convert the fields of the status register into an unsigned 8-bit number
+    /// 
+    /// Return (`u8`): this status register object as an 8-bit number, with each bit corresponding to a
+    /// flag
     pub fn as_u8(&self) -> u8 {
         let mut num: u8 = 0;
         num |= self.c as u8;
@@ -56,6 +68,10 @@ impl StatusRegister {
     }
 
     /// Convert an unsigned 8-bit number into the flags of the status register.
+    /// Bit 5 of the number is unused
+    /// 
+    /// Arguments: 
+    /// * `flags` (`u8`): the 8-bit number to use
     pub fn from_u8(&mut self, flags: u8) {
         self.c = (flags & 0b1u8) != 0;
         self.z = (flags & 0b10u8) != 0;
@@ -68,28 +84,41 @@ impl StatusRegister {
 }
 
 /// The memory page in which the stack is located. The stack is located from
-/// 0x0100 to 0x01FF.
+/// 0x0100 to 0x01FF
 const STACK_MEMORY_PAGE: u16 = 0x0100;
 
-/// Structure to represent the CPU of the NES system.
+/// Structure to represent the CPU of the NES system
 pub struct CPU {
+    /// The accumulator register
     pub a: u8,
+    /// The X register
     pub x: u8,
+    /// The Y register
     pub y: u8,
+    /// The stack pointer
     pub sp: u8,
+    /// The program counter
     pub pc: u16,
+    /// The status register
     pub p: StatusRegister
 }
 
 impl CPU {
 
-    /// Create a new CPU with all fields zeroed.
+    /// Create a new CPU with all fields zeroed
+    /// 
+    /// Return (`CPU`): a new CPU object
     pub fn new() -> Self {
         CPU{a: 0, x:0, y: 0, sp: 0, pc: 0, p: StatusRegister::new()}
     }
 
     /// Perform a reset interrupt request, which involves setting the program counter to the
-    /// value stored in 0xFFFC and 0xFFFD.
+    /// value stored in 0xFFFC and 0xFFFD
+    /// 
+    /// Arguments: 
+    /// * `memory` (`MainMemory`): the system memory to use with this CPU
+    /// 
+    /// Return (`u8`): the number of cycles this operation takes
     pub fn reset(&mut self, memory: &mut MainMemory) -> usize {
 
         // Values come from Visual6502 simulator.
@@ -107,7 +136,12 @@ impl CPU {
     }
 
     /// Perform an interrupt request, which involves pushing the low and high bytes of the PC on the stack, the
-    /// processor flags on the stack, disabling interrupts and setting the PC to the value stored in 0xFFFE/0xFFFF.
+    /// processor flags on the stack, disabling interrupts and setting the PC to the value stored in 0xFFFE/0xFFFF
+    /// 
+    /// Arguments: 
+    /// * `memory` (`MainMemory`): the system memory to use with this CPU
+    /// 
+    /// Return (`u8`): the number of cycles this operation takes
     pub fn irq(&mut self, memory: &mut MainMemory) -> usize {
 
         if !self.p.i {
@@ -133,7 +167,12 @@ impl CPU {
     }
 
     /// Perform a non-maskable interrupt, which involves pushing the low and high bytes of the PC on the stack, the
-    /// processor flags on the stack, disabling interrupts and setting the PC to the value stored in 0xFFFA/0xFFFB.
+    /// processor flags on the stack, disabling interrupts and setting the PC to the value stored in 0xFFFA/0xFFFB
+    /// 
+    /// Arguments: 
+    /// * `memory` (`MainMemory`): the system memory to use with this CPU
+    /// 
+    /// Return (`u8`): the number of cycles this operation takes
     pub fn nmi(&mut self, memory: &mut MainMemory) -> usize {
 
         let pc_low = (self.pc & 0x00FF) as u8;
@@ -154,20 +193,36 @@ impl CPU {
         7
     }
 
-    /// Push a value onto the stack.
+    /// Push a value onto the stack
+    /// 
+    /// Argument: 
+    /// * `memory` (`MainMemory`): the system memory to use with this CPU
+    /// * `val` (`u8`): the value to push on the stack
+    /// 
+    /// Return (`&Self`): a reference to this CPU
     pub fn push_stack(&mut self, memory: &mut MainMemory, val: u8) -> &Self {
         let stack_addr = STACK_MEMORY_PAGE + self.sp as u16;
-	// writing to the stack is always valid, so unwrap
+
+	    // writing to the stack is always valid, so unwrap
         memory.write(stack_addr, val).unwrap();
+
         let (new_stack_addr, underflowed) = self.sp.overflowing_sub(1);
         self.sp = new_stack_addr;
+
         if underflowed {
             log::warn!("Stack underflow detected");
         }
+
         self
     }
 
-    /// Retrieve the value at the top of the stack.
+    /// Retrieve the value at the top of the stack. The value is not deleted from
+    /// memory
+    /// 
+    /// Arguments: 
+    /// * `memory` (`MainMemory`): the system memory to use with this CPU
+    /// 
+    /// Return (`u8`): the value popped from the stack
     pub fn pop_stack(&mut self, memory: &mut MainMemory) -> u8 {
         let (new_stack_addr, overflowed) = self.sp.overflowing_add(1);
         self.sp = new_stack_addr;
@@ -175,23 +230,41 @@ impl CPU {
             log::warn!("Stack overflow detected");
         }
         let stack_addr = STACK_MEMORY_PAGE + self.sp as u16;
-	// we know reading from the stack is aways valid, so just unwrap
+        
+        // we know reading from the stack is aways valid, so just unwrap
         memory.read(stack_addr).unwrap() // value at the address is NOT deleted when SP moves
     }
 
-    /// Check if the given unsigned value is negative in two's complement.
+    /// Check if the given unsigned value is negative in two's complement
+    /// 
+    /// Arguments: 
+    /// * `val` (`u8`): the value to check
+    /// 
+    /// Return (`bool`): `true` if the value is negative in two's complement, `false` otherwise.
     pub fn check_if_neg(val: u8) -> bool {
         (val >> 7) == 1
     }
 
-    /// Get the byte at the PC and increment the PC by 1.
+    /// Get the byte at the PC and increment the PC by 1
+    /// 
+    /// Arguments: 
+    /// * `memory` (`MainMemory`): the system memory to use with this CPU
+    /// 
+    /// Return (`Result<u8, &'static str>`): `Ok` if the memory can successfully be read, containing the
+    /// byte that was read. Otherwise, an `Err`
     pub fn read_byte_and_increment(&mut self, memory: &mut MainMemory) -> Result<u8, &'static str> {
         let byte = memory.read(self.pc)?;
         self.pc += 1;
         Ok(byte)
     }
 
-    /// Perform one fetch-decode-execute cycle.
+    /// Perform one fetch-decode-execute cycle
+    /// 
+    /// Arguments: 
+    /// * `memory` (`MainMemory`): the system memory to use with this CPU
+    /// 
+    /// Return (`Result<(), String>`): an `Err` if any part of the instruction cycle fails
+    /// (including invalid read/writes to memory), `Ok` otherwise
     pub fn instruction_cycle(&mut self, memory: &mut MainMemory) -> Result<(), String> {
         println!("{:x}", self.pc);
         let opcode = match self.read_byte_and_increment(memory) {
