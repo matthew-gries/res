@@ -1,24 +1,26 @@
 use crate::memory::Memory;
 use crate::memory::MemorySegmentation;
 
-/// The range of all addresses in the memory map (this is the largest addressable address
-/// + 1)
+/// The range of all addresses in the memory map
 pub const MAIN_MEMORY_MAP_ADDRESSABLE_RANGE: usize = 0x10000;
 
-/// Structure to represent the main memory of the NES.
+/// Structure to represent the main memory of the NES
 pub struct MainMemory {
+	/// The internal array that stores the data in memory
     data: [u8; MAIN_MEMORY_MAP_ADDRESSABLE_RANGE]
 }
 
-/// Enumeration of memory map segments in the main memory. IORegisters
-/// contains segments that may or may not be mirrored, and therefore
-/// contains a bool parameter to signify if an address is mirrored or
-/// not.
+/// Enumeration of memory map segments in the main memory
 pub enum MainMemorySegment {
-    RAM,
-    IORegisters(bool),
-    ExpansionRom,
-    SRAM,
+	/// General random access memory
+	RAM,
+	/// Registers that control IO. Contains `true` if the segment is a mirror
+	IORegisters(bool),
+	/// Expansion read-only memory
+	ExpansionRom,
+	/// Static random access memory
+	SRAM,
+	/// Program read-only memory
     PRGROM,
 }
 
@@ -42,23 +44,38 @@ impl MemorySegmentation<MainMemorySegment> for MainMemorySegment {
 
 impl MainMemory {
 
-    /// Constructs a new main memory object, with all values zeroed.
+    /// Constructs a new main memory object, with all values zeroed
+	/// 
+	/// Return (`Self`): the new main memory objects
     pub fn new() -> Self {
         MainMemory{data: [0; MAIN_MEMORY_MAP_ADDRESSABLE_RANGE]}
     }
 
-    /// Constructs a main memory object from a given buffer of data.
+    /// Constructs a main memory object from a given buffer of data
+	/// 
+	/// Arguments: 
+	/// * `data` (`[u8; MAIN_MEMORY_MAP_ADDRESSABLE_RANGE]`): the data to use in this memory
+	/// 
+	/// Return (`Self`): the constructed main memory object
     pub fn from(data: [u8; MAIN_MEMORY_MAP_ADDRESSABLE_RANGE]) -> Self {
 		MainMemory{data}
     }
 
-    /// Destroy this main memory object and return the internal data buffer.
+    /// Consume this main memory object and return the internal data buffer
+	/// 
+	/// Return (`[u8; MAIN_MEMORY_MAP_ADDRESSABLE_RANGE]`): the internal data buffer
     pub fn to_buffer(self) -> [u8; MAIN_MEMORY_MAP_ADDRESSABLE_RANGE] {
 		self.data
     }
 
     /// Determine if the page of the two given addresses are the same. The page
-    /// is defined as the high order byte.
+    /// is defined as the high order byte of an address
+	/// 
+	/// Arguments: 
+	/// * `addr1` (`u16`): the first address
+	/// * `addr2` (`u16`): the other address
+	/// 
+	/// Return (`bool`): `true` if the address are in the same page, `false` if they are not
     pub fn check_if_page_crossed(addr1: u16, addr2: u16) -> bool {
         // check if the high bytes are different
         let addr1_high = addr1 & 0xFF00;

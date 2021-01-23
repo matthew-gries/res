@@ -1,12 +1,12 @@
 use crate::memory::Memory;
 use crate::memory::MemorySegmentation;
 
-/// The size of the addressanle range for the video memory (the largest addressable address
-/// + 1)
+/// The size of the addressable range for the video memory
 pub const VIDEO_MEMORY_MAP_ADDRESSABLE_RANGE: usize = 0x10000;
 
-/// Structure to represent the PPU's memory in the NES system.
+/// Structure to represent the PPU's memory in the NES system
 pub struct VideoMemory {
+	/// The internal representation of the memory as an array
     data: [u8; VIDEO_MEMORY_MAP_ADDRESSABLE_RANGE]
 }
 
@@ -14,8 +14,11 @@ pub struct VideoMemory {
 /// and Palettes have sections of their segments that are not mirrored, and as such contain
 /// a bool parameter that determines if the address in that segment should be mirrored.
 pub enum VideoMemorySegment {
-    PatternTable,
+	/// The pattern table
+	PatternTable,
+	/// The name table. Contains `true` if the segment is a mirror
     NameTable(bool),
+	/// The palette table. Contains `true` if the segment is a mirror
     Palettes(bool),
 }
 
@@ -23,19 +26,20 @@ impl MemorySegmentation<VideoMemorySegment> for VideoMemorySegment {
     
     fn get_segmentation(addr: u16) -> VideoMemorySegment {
 		let addr = addr % 0x4000;
+
 		if addr < 0x2000 {
 			VideoMemorySegment::PatternTable
 		} else if addr < 0x3F00 {
 			if addr < 0x3000 {
-			VideoMemorySegment::NameTable(false)
+				VideoMemorySegment::NameTable(false)
 			} else {
-			VideoMemorySegment::NameTable(true)
+				VideoMemorySegment::NameTable(true)
 			}
 		} else {
 			if addr < 0x3F20 {
-			VideoMemorySegment::Palettes(false)
+				VideoMemorySegment::Palettes(false)
 			} else {
-			VideoMemorySegment::Palettes(true)
+				VideoMemorySegment::Palettes(true)
 			}
 		}
     }
@@ -44,6 +48,8 @@ impl MemorySegmentation<VideoMemorySegment> for VideoMemorySegment {
 impl VideoMemory {
     
     /// Construct a new video memory object
+	/// 
+	/// Return (`Self`): the new video memory object
     pub fn new() -> Self {
 		VideoMemory{data: [0; VIDEO_MEMORY_MAP_ADDRESSABLE_RANGE]}
     }
@@ -81,7 +87,7 @@ impl Memory<VideoMemorySegment> for VideoMemory {
 
     fn write(&mut self, addr: u16, byte: u8) -> Result<(), &'static str> {
 
-	let adjusted_addr = Self::get_adjusted_address(addr);
+		let adjusted_addr = Self::get_adjusted_address(addr);
         self.data[adjusted_addr as usize] = byte;
 		Ok(())
     }
