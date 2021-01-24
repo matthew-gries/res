@@ -128,8 +128,7 @@ impl CPU {
         self.sp = 0xFD;
         self.p.from_u8(16 as u8);
 
-        // we know that these values are safe to read to, so just unwrap
-        self.pc = ((memory.read(0xFFFD).unwrap() as u16) << 8) | memory.read(0xFFFC).unwrap() as u16;
+        self.pc = ((memory.read(0xFFFD) as u16) << 8) | memory.read(0xFFFC) as u16;
 
         // resets take 8 cycles
         8
@@ -153,8 +152,8 @@ impl CPU {
             self.p.i = true;
             self.push_stack(memory, self.p.as_u8());
 
-            let pc_low = memory.read(0xFFFE).unwrap();
-            let pc_high = memory.read(0xFFFF).unwrap();
+            let pc_low = memory.read(0xFFFE);
+            let pc_high = memory.read(0xFFFF);
 
             self.pc = ((pc_high as u16) << 8) | pc_low as u16;
 
@@ -184,8 +183,8 @@ impl CPU {
         self.p.i = true;
         self.p.b = false;
 
-        let pc_low = memory.read(0xFFFA).unwrap();
-        let pc_high = memory.read(0xFFFB).unwrap();
+        let pc_low = memory.read(0xFFFA);
+        let pc_high = memory.read(0xFFFB);
 
         self.pc = ((pc_high as u16) << 8) | pc_low as u16;
 
@@ -203,8 +202,7 @@ impl CPU {
     pub fn push_stack(&mut self, memory: &mut MainMemory, val: u8) -> &Self {
         let stack_addr = STACK_MEMORY_PAGE + self.sp as u16;
 
-	    // writing to the stack is always valid, so unwrap
-        memory.write(stack_addr, val).unwrap();
+        memory.write(stack_addr, val);
 
         let (new_stack_addr, underflowed) = self.sp.overflowing_sub(1);
         self.sp = new_stack_addr;
@@ -232,7 +230,7 @@ impl CPU {
         let stack_addr = STACK_MEMORY_PAGE + self.sp as u16;
         
         // we know reading from the stack is aways valid, so just unwrap
-        memory.read(stack_addr).unwrap() // value at the address is NOT deleted when SP moves
+        memory.read(stack_addr) // value at the address is NOT deleted when SP moves
     }
 
     /// Check if the given unsigned value is negative in two's complement
@@ -250,40 +248,30 @@ impl CPU {
     /// Arguments: 
     /// * `memory` (`MainMemory`): the system memory to use with this CPU
     /// 
-    /// Return (`Result<u8, &'static str>`): `Ok` if the memory can successfully be read, containing the
-    /// byte that was read. Otherwise, an `Err`
-    pub fn read_byte_and_increment(&mut self, memory: &mut MainMemory) -> Result<u8, &'static str> {
-        let byte = memory.read(self.pc)?;
+    /// Return (`u8`): the byte read at the address
+    pub fn read_byte_and_increment(&mut self, memory: &mut MainMemory) -> u8 {
+        let byte = memory.read(self.pc);
         self.pc += 1;
-        Ok(byte)
+        byte
     }
 
     /// Perform one fetch-decode-execute cycle
     /// 
     /// Arguments: 
     /// * `memory` (`MainMemory`): the system memory to use with this CPU
-    /// 
-    /// Return (`Result<(), String>`): an `Err` if any part of the instruction cycle fails
-    /// (including invalid read/writes to memory), `Ok` otherwise
-    pub fn instruction_cycle(&mut self, memory: &mut MainMemory) -> Result<(), String> {
+    pub fn instruction_cycle(&mut self, memory: &mut MainMemory) {
         println!("{:x}", self.pc);
-        let opcode = match self.read_byte_and_increment(memory) {
-            Ok(op) => op,
-            Err(e) => {
-                return Err(String::from(e));
-            }
-        };
+
+        let opcode = self.read_byte_and_increment(memory);
 	
         let instr = INSTRUCTION_TABLE.get(&opcode);
 
         let instr = match instr {
             Some(i) => i,
-            None => {
-                return Err(format!("Invalid opcode {} was given!", opcode).to_string());
-            }
+            None => panic!("Invalid opcode {} was given!", opcode)
         };
 
-        let cycles = match instr {
+        let mut cycles = match instr {
             Instruction::ADC(mode, time) => instruction_func::adc(self, memory, mode, *time),
             Instruction::AND(mode, time) => instruction_func::and(self, memory, mode, *time),
             Instruction::ASL(mode, time) => instruction_func::asl(self, memory, mode, *time),
@@ -342,13 +330,9 @@ impl CPU {
             Instruction::TYA(mode, time) => instruction_func::tya(self, memory, mode, *time),
         };
 
-        let mut cycles = cycles?;
-
         // loop the number of cycles it took to complete the instruction
         while cycles != 0 {
             cycles -= 1;
         }
-
-        Ok(())
     }
 }

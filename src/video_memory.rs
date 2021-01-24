@@ -80,16 +80,15 @@ impl Memory<VideoMemorySegment> for VideoMemory {
 		}
     }
 
-    fn read(&mut self, addr: u16) -> Result<u8, &'static str> {
+    fn read(&mut self, addr: u16) -> u8 {
 		let adjusted_addr = Self::get_adjusted_address(addr);
-		Ok(self.data[adjusted_addr as usize])
+		self.data[adjusted_addr as usize]
     }
 
-    fn write(&mut self, addr: u16, byte: u8) -> Result<(), &'static str> {
+    fn write(&mut self, addr: u16, byte: u8) {
 
 		let adjusted_addr = Self::get_adjusted_address(addr);
         self.data[adjusted_addr as usize] = byte;
-		Ok(())
     }
 }
 
@@ -104,10 +103,10 @@ mod tests {
 		data[0x1FFF] = 2;
 		let mut memory = VideoMemory{data};
 
-		assert_eq!(memory.read(0x0).unwrap(), 1);
-		assert_eq!(memory.read(0x4000).unwrap(), 1);
-		assert_eq!(memory.read(0x1FFF).unwrap(), 2);
-		assert_eq!(memory.read(0x5FFF).unwrap(), 2);
+		assert_eq!(memory.read(0x0), 1);
+		assert_eq!(memory.read(0x4000), 1);
+		assert_eq!(memory.read(0x1FFF), 2);
+		assert_eq!(memory.read(0x5FFF), 2);
     }
 
     #[test]
@@ -115,16 +114,16 @@ mod tests {
 		
 		let mut memory = VideoMemory::new();
 
-		memory.write(0x0, 1).unwrap();
-		memory.write(0x1FFF, 2).unwrap();
-		memory.write(0x5FFE, 3).unwrap();
+		memory.write(0x0, 1);
+		memory.write(0x1FFF, 2);
+		memory.write(0x5FFE, 3);
 
-		assert_eq!(memory.read(0x0).unwrap(), 1);
-		assert_eq!(memory.read(0x4000).unwrap(), 1);
-		assert_eq!(memory.read(0x1FFF).unwrap(), 2);
-		assert_eq!(memory.read(0x5FFF).unwrap(), 2);
-		assert_eq!(memory.read(0x1FFE).unwrap(), 3);
-		assert_eq!(memory.read(0x5FFE).unwrap(), 3);
+		assert_eq!(memory.read(0x0), 1);
+		assert_eq!(memory.read(0x4000), 1);
+		assert_eq!(memory.read(0x1FFF), 2);
+		assert_eq!(memory.read(0x5FFF), 2);
+		assert_eq!(memory.read(0x1FFE), 3);
+		assert_eq!(memory.read(0x5FFE), 3);
     }
 
     #[test]
@@ -135,12 +134,12 @@ mod tests {
 		data[0x2FFF] = 3;
 		let mut memory = VideoMemory{data};
 
-		assert_eq!(memory.read(0x2000).unwrap(), 1);
-		assert_eq!(memory.read(0x3000).unwrap(), 1);
-		assert_eq!(memory.read(0x2EFF).unwrap(), 2);
-		assert_eq!(memory.read(0x3EFF).unwrap(), 2);
-		assert_eq!(memory.read(0x2FFF).unwrap(), 3);
-		assert_eq!(memory.read(0x3FFF).unwrap(), 0);
+		assert_eq!(memory.read(0x2000), 1);
+		assert_eq!(memory.read(0x3000), 1);
+		assert_eq!(memory.read(0x2EFF), 2);
+		assert_eq!(memory.read(0x3EFF), 2);
+		assert_eq!(memory.read(0x2FFF), 3);
+		assert_eq!(memory.read(0x3FFF), 0);
     }
 
     #[test]
@@ -148,16 +147,16 @@ mod tests {
 
 		let mut memory = VideoMemory::new();
 
-		memory.write(0x2000, 1).unwrap();
-		memory.write(0x2EFF, 2).unwrap();
-		memory.write(0x2FFF, 3).unwrap();
+		memory.write(0x2000, 1);
+		memory.write(0x2EFF, 2);
+		memory.write(0x2FFF, 3);
 
-		assert_eq!(memory.read(0x2000).unwrap(), 1);
-		assert_eq!(memory.read(0x3000).unwrap(), 1);
-		assert_eq!(memory.read(0x2EFF).unwrap(), 2);
-		assert_eq!(memory.read(0x3EFF).unwrap(), 2);
-		assert_eq!(memory.read(0x2FFF).unwrap(), 3);
-		assert_eq!(memory.read(0x3FFF).unwrap(), 0);
+		assert_eq!(memory.read(0x2000), 1);
+		assert_eq!(memory.read(0x3000), 1);
+		assert_eq!(memory.read(0x2EFF), 2);
+		assert_eq!(memory.read(0x3EFF), 2);
+		assert_eq!(memory.read(0x2FFF), 3);
+		assert_eq!(memory.read(0x3FFF), 0);
     }
 
     #[test]
@@ -170,12 +169,12 @@ mod tests {
 
 		let mut memory = VideoMemory{data};
 
-		assert_eq!(memory.read(0x3F00).unwrap(), 1);
-		assert_eq!(memory.read(0x3F20).unwrap(), 1);
-		assert_eq!(memory.read(0x3FE0).unwrap(), 1);
-		assert_eq!(memory.read(0x3F1F).unwrap(), 2);
-		assert_eq!(memory.read(0x3F3F).unwrap(), 2);
-		assert_eq!(memory.read(0x3FFF).unwrap(), 2);
+		assert_eq!(memory.read(0x3F00), 1);
+		assert_eq!(memory.read(0x3F20), 1);
+		assert_eq!(memory.read(0x3FE0), 1);
+		assert_eq!(memory.read(0x3F1F), 2);
+		assert_eq!(memory.read(0x3F3F), 2);
+		assert_eq!(memory.read(0x3FFF), 2);
     }
 
     #[test]
@@ -183,14 +182,14 @@ mod tests {
 
 		let mut memory = VideoMemory::new();
 		
-		memory.write(0x3F00, 1).unwrap();
-		memory.write(0x3F1F, 2).unwrap();
+		memory.write(0x3F00, 1);
+		memory.write(0x3F1F, 2);
 
-		assert_eq!(memory.read(0x3F00).unwrap(), 1);
-		assert_eq!(memory.read(0x3F20).unwrap(), 1);
-		assert_eq!(memory.read(0x3FE0).unwrap(), 1);
-		assert_eq!(memory.read(0x3F1F).unwrap(), 2);
-		assert_eq!(memory.read(0x3F3F).unwrap(), 2);
-		assert_eq!(memory.read(0x3FFF).unwrap(), 2);
+		assert_eq!(memory.read(0x3F00), 1);
+		assert_eq!(memory.read(0x3F20), 1);
+		assert_eq!(memory.read(0x3FE0), 1);
+		assert_eq!(memory.read(0x3F1F), 2);
+		assert_eq!(memory.read(0x3F3F), 2);
+		assert_eq!(memory.read(0x3FFF), 2);
     }
 }

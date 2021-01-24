@@ -58,7 +58,7 @@ impl NesSystem {
     /// Start the system
     pub fn run(&mut self) {
         loop {
-            self.cpu.instruction_cycle(&mut self.memory).unwrap();
+            self.cpu.instruction_cycle(&mut self.memory);
         }
     }
     

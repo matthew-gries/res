@@ -26,9 +26,8 @@ pub trait Memory<T: MemorySegmentation<T>> {
     /// Arguments: 
     /// * `addr` (`u16`): the address to read from
     /// 
-    /// Return (`Result<u8, &'static str>`): `Ok` if the read was successful, returning the byte read at the address.
-    /// Otherwise, an `Err` is returned
-    fn read(&mut self, addr: u16) -> Result<u8, &'static str>;
+    /// Return (`u8`): the byte at the given address
+    fn read(&mut self, addr: u16) -> u8;
 
     /// Write a byte to the given address
     /// 
@@ -36,8 +35,9 @@ pub trait Memory<T: MemorySegmentation<T>> {
     /// * `addr` (`u16`): the address to write to
     /// * `byte` (`u8`): the byte to store at the address
     /// 
-    /// Return (`Result<(), &'static str>`): `Ok` if the read was successful. Otherwise, an `Err` is returned
-    fn write(&mut self, addr: u16, byte: u8) -> Result<(), &'static str>;
+    /// Panics: if a byte cannot be written to the given address (i.e. writing to a read only section
+    /// of memory)
+    fn write(&mut self, addr: u16, byte: u8);
 
     /// Get the address in the memory map after adjusting for mirroring
     /// 

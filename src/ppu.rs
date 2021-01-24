@@ -4,35 +4,11 @@ pub use crate::video_memory::VideoMemory;
 
 use std::collections::HashMap;
 
-const NAMETABLE_HEIGHT    : usize = 32;
-const NAMETABLE_WIDTH     : usize = 30;
-const PALETTE_HEIGHT      : usize = 8;
-const PALETTE_WIDTH       : usize = 8;
-const SYSTEM_PALETTE_ROW  : usize = 4;
-const SYSTEM_PALETTE_COL  : usize = 16;
-const IMAGE_PALETTE_SIZE  : usize = 16;
-const SPRITE_PALETTE_SIZE : usize = 16;
-const PATTERN_TILE_COUNT  : usize = 256;
-
-const IMAGE_PALETTE_ADDR       : u16  = 0x3F00;
-const SPRITE_PALETTE_ADDR      : u16  = 0x3F10;
-const PATTERN_TABLE_ZERO_START : u16  = 0x0000;
-const PATTERN_TABLE_ONE_START  : u16  = 0x0000;
-const PATTERN_TABLE_LEN        : u16  = 0x1000;
-const NAME_TABLE_ZERO_START    : u16  = 0x2000;
-const NAME_TABLE_ONE_START     : u16  = 0x2400;
-const NAME_TABLE_TWO_START     : u16  = 0x2800;
-const NAME_TABLE_THREE_START   : u16  = 0x2C00;
-const NAME_TABLE_LEN           : u16  = 0x3C0;
-const ATTR_TABLE_ZERO_START    : u16  = 0x23C0;
-const ATTR_TABLE_ONE_START     : u16  = 0x27C0;
-const ATTR_TABLE_TWO_START     : u16  = 0x2BC0;
-const ATTR_TABLE_THREE_START   : u16  = 0x2FC0;
-const ATTR_TABLE_LEN           : u16  = 0x3C0;
-const ATTR_TABLE_BLOCK_SIZE    : u16  = 4;
+/// The length of each pattern table
+const PATTERN_TABLE_LEN: usize = 0x1000;
 
 lazy_static! {
-    // a mapping between the byte used in the image and sprite palettes and the colors the bytes
+    // A mapping between the byte used in the image and sprite palettes and the colors the bytes
     // correspond to
     static ref SYSTEM_PALETTE: HashMap<u8, u32> = {
         let mut map = HashMap::new();
@@ -105,3 +81,27 @@ lazy_static! {
         map
     };
 }
+
+/// Enumeration of all pattern tables the PPU can read from
+#[derive(Debug, Copy, Clone)]
+pub enum PatternTable {
+    /// The first pattern table
+    One,
+    /// The second pattern table
+    Two
+}
+
+/// Read from video memory at the given address for the given number of bytes
+fn read_from(vram: &mut VideoMemory, addr: u16, len: usize) -> Result<Vec<u8>, &'static str> {
+    let mut data = vec![];
+    let addr_start = addr as usize;
+    for i in addr_start..(addr_start + len) {
+        data.push(vram.read(i as u16));
+    }
+    Ok(data)
+}
+
+pub fn get_pattern_table(vram: &mut VideoMemory, table: PatternTable) -> [u8; PATTERN_TABLE_LEN] {
+    [0; PATTERN_TABLE_LEN]    
+}
+

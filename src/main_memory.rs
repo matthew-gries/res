@@ -105,29 +105,25 @@ impl Memory<MainMemorySegment> for MainMemory {
 		}
     }
 
-    fn read(&mut self, addr: u16) -> Result<u8, &'static str> {
+    fn read(&mut self, addr: u16) -> u8 {
 
 		let adjusted_addr = Self::get_adjusted_address(addr);
-			let value = self.data[adjusted_addr as usize];
-			if addr == 0x2002 {
-				// special conditions for reading PPU status.
-				//    - Bit 7 will be cleared
-				//    - Address latch of PPUSCROLL and PPUADDR is cleared
-				if let Err(e) = self.write(addr, value & 0x7F) {
-				return Err(e);
-			}
-			// TODO
+		let value = self.data[adjusted_addr as usize];
+		if addr == 0x2002 {
+			// special conditions for reading PPU status.
+			//    - Bit 7 will be cleared
+			//    - Address latch of PPUSCROLL and PPUADDR is cleared
+			self.write(addr, value & 0x7F);
 		}
-
-		Ok(value)
-
+		// TODO
+		value
     }
 
-    fn write(&mut self, addr: u16, byte: u8) -> Result<(), &'static str> {
+    fn write(&mut self, addr: u16, byte: u8) {
 
 		match MainMemorySegment::get_segmentation(addr) {
 			MainMemorySegment::ExpansionRom | MainMemorySegment::PRGROM => {
-				return Err("CPU attempted to write to read only memory!");
+				panic!("CPU attempted to write to read only memory!");
 			},
 			MainMemorySegment::IORegisters(_) => {
 				if addr == 0x2002 {
@@ -139,7 +135,6 @@ impl Memory<MainMemorySegment> for MainMemory {
 
 		let adjusted_addr = Self::get_adjusted_address(addr);
         self.data[adjusted_addr as usize] = byte;
-		Ok(())
     }
 }
 
@@ -156,43 +151,43 @@ mod tests {
 
 		let mut memory = MainMemory{data};
 		
-		assert_eq!(memory.read(0x0).unwrap(), 1);
-		assert_eq!(memory.read(0x0800).unwrap(), 1);
-		assert_eq!(memory.read(0x1000).unwrap(), 1);
-		assert_eq!(memory.read(0x1800).unwrap(), 1);
+		assert_eq!(memory.read(0x0), 1);
+		assert_eq!(memory.read(0x0800), 1);
+		assert_eq!(memory.read(0x1000), 1);
+		assert_eq!(memory.read(0x1800), 1);
 
-		assert_eq!(memory.read(0x1).unwrap(), 2);
-		assert_eq!(memory.read(0x0801).unwrap(), 2);
-		assert_eq!(memory.read(0x1001).unwrap(), 2);
-		assert_eq!(memory.read(0x1801).unwrap(), 2);
+		assert_eq!(memory.read(0x1), 2);
+		assert_eq!(memory.read(0x0801), 2);
+		assert_eq!(memory.read(0x1001), 2);
+		assert_eq!(memory.read(0x1801), 2);
 
-		assert_eq!(memory.read(0x07FF).unwrap(), 3);
-		assert_eq!(memory.read(0x0FFF).unwrap(), 3);
-		assert_eq!(memory.read(0x17FF).unwrap(), 3);
-		assert_eq!(memory.read(0x1FFF).unwrap(), 3);
+		assert_eq!(memory.read(0x07FF), 3);
+		assert_eq!(memory.read(0x0FFF), 3);
+		assert_eq!(memory.read(0x17FF), 3);
+		assert_eq!(memory.read(0x1FFF), 3);
     }
 
     #[test]
     fn write_ram() {
 		let mut memory = MainMemory::new();
 
-		memory.write(0x0, 1).unwrap();
-		assert_eq!(memory.read(0x0).unwrap(), 1);
-		assert_eq!(memory.read(0x0800).unwrap(), 1);
-		assert_eq!(memory.read(0x1000).unwrap(), 1);
-		assert_eq!(memory.read(0x1800).unwrap(), 1);
+		memory.write(0x0, 1);
+		assert_eq!(memory.read(0x0), 1);
+		assert_eq!(memory.read(0x0800), 1);
+		assert_eq!(memory.read(0x1000), 1);
+		assert_eq!(memory.read(0x1800), 1);
 
-		memory.write(0x1, 2).unwrap();
-		assert_eq!(memory.read(0x1).unwrap(), 2);
-		assert_eq!(memory.read(0x0801).unwrap(), 2);
-		assert_eq!(memory.read(0x1001).unwrap(), 2);
-		assert_eq!(memory.read(0x1801).unwrap(), 2);
+		memory.write(0x1, 2);
+		assert_eq!(memory.read(0x1), 2);
+		assert_eq!(memory.read(0x0801), 2);
+		assert_eq!(memory.read(0x1001), 2);
+		assert_eq!(memory.read(0x1801), 2);
 
-		memory.write(0x07FF, 3).unwrap();
-		assert_eq!(memory.read(0x07FF).unwrap(), 3);
-		assert_eq!(memory.read(0x0FFF).unwrap(), 3);
-		assert_eq!(memory.read(0x17FF).unwrap(), 3);
-		assert_eq!(memory.read(0x1FFF).unwrap(), 3);
+		memory.write(0x07FF, 3);
+		assert_eq!(memory.read(0x07FF), 3);
+		assert_eq!(memory.read(0x0FFF), 3);
+		assert_eq!(memory.read(0x17FF), 3);
+		assert_eq!(memory.read(0x1FFF), 3);
     }
 
     #[test]
@@ -205,36 +200,36 @@ mod tests {
 
 		let mut memory = MainMemory{data};
 		
-		assert_eq!(memory.read(0x2000).unwrap(), 1);
-		assert_eq!(memory.read(0x2008).unwrap(), 1);
-		assert_eq!(memory.read(0x3FF8).unwrap(), 1);
+		assert_eq!(memory.read(0x2000), 1);
+		assert_eq!(memory.read(0x2008), 1);
+		assert_eq!(memory.read(0x3FF8), 1);
 
-		assert_eq!(memory.read(0x2007).unwrap(), 2);
-		assert_eq!(memory.read(0x200F).unwrap(), 2);
-		assert_eq!(memory.read(0x3FFF).unwrap(), 2);
+		assert_eq!(memory.read(0x2007), 2);
+		assert_eq!(memory.read(0x200F), 2);
+		assert_eq!(memory.read(0x3FFF), 2);
 
-		assert_eq!(memory.read(0x4000).unwrap(), 3);
-		assert_eq!(memory.read(0x401F).unwrap(), 4);
+		assert_eq!(memory.read(0x4000), 3);
+		assert_eq!(memory.read(0x401F), 4);
     }
 
     #[test]
     fn write_io_reg() {
 		let mut memory = MainMemory::new();
 
-		memory.write(0x2000, 1).unwrap();
-		memory.write(0x2007, 2).unwrap();
-		memory.write(0x4000, 3).unwrap();
-		memory.write(0x401F, 4).unwrap();
+		memory.write(0x2000, 1);
+		memory.write(0x2007, 2);
+		memory.write(0x4000, 3);
+		memory.write(0x401F, 4);
 
-		assert_eq!(memory.read(0x2000).unwrap(), 1);
-		assert_eq!(memory.read(0x2008).unwrap(), 1);
-		assert_eq!(memory.read(0x3FF8).unwrap(), 1);
+		assert_eq!(memory.read(0x2000), 1);
+		assert_eq!(memory.read(0x2008), 1);
+		assert_eq!(memory.read(0x3FF8), 1);
 
-		assert_eq!(memory.read(0x2007).unwrap(), 2);
-		assert_eq!(memory.read(0x200F).unwrap(), 2);
-		assert_eq!(memory.read(0x3FFF).unwrap(), 2);
+		assert_eq!(memory.read(0x2007), 2);
+		assert_eq!(memory.read(0x200F), 2);
+		assert_eq!(memory.read(0x3FFF), 2);
 
-		assert_eq!(memory.read(0x4000).unwrap(), 3);
-		assert_eq!(memory.read(0x401F).unwrap(), 4);
+		assert_eq!(memory.read(0x4000), 3);
+		assert_eq!(memory.read(0x401F), 4);
     }
 }
