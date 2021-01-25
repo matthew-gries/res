@@ -1,16 +1,4 @@
-#[macro_use]
-extern crate lazy_static;
-#[macro_use]
-extern crate log;
-
-mod cpu;
-mod ppu;
-mod mapper;
-mod memory;
-mod main_memory;
-mod video_memory;
-mod instruction;
-mod system;
+use res::core::system;
 
 use std::env;
 

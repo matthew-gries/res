@@ -1,6 +1,6 @@
-use crate::cpu::CPU;
-use crate::main_memory::MainMemory;
-use crate::memory::Memory;
+use crate::core::cpu::CPU;
+use crate::core::main_memory::MainMemory;
+use crate::core::memory::Memory;
 
 use std::collections::HashMap;
 

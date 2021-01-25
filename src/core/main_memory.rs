@@ -1,5 +1,5 @@
-use crate::memory::Memory;
-use crate::memory::MemorySegmentation;
+use crate::core::memory::Memory;
+use crate::core::memory::MemorySegmentation;
 
 /// The range of all addresses in the memory map
 pub const MAIN_MEMORY_MAP_ADDRESSABLE_RANGE: usize = 0x10000;

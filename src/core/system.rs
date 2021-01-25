@@ -1,9 +1,8 @@
-use crate::cpu::CPU;
-use crate::mapper;
-use crate::mapper::Mapper;
-use crate::memory::Memory;
-use crate::main_memory::MainMemory;
-use crate::main_memory::MAIN_MEMORY_MAP_ADDRESSABLE_RANGE;
+use crate::core::cpu::CPU;
+use crate::core::mapper;
+use crate::core::memory::Memory;
+use crate::core::main_memory::MainMemory;
+use crate::core::main_memory::MAIN_MEMORY_MAP_ADDRESSABLE_RANGE;
 
 use nes_system_error::NesSystemError;
 

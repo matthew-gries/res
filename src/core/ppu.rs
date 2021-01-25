@@ -1,11 +1,20 @@
-pub use crate::memory::Memory;
-pub use crate::main_memory::MainMemory;
-pub use crate::video_memory::VideoMemory;
+use crate::core::memory::Memory;
+use crate::core::video_memory::VideoMemory;
 
 use std::collections::HashMap;
 
 /// The length of each pattern table
-const PATTERN_TABLE_LEN: usize = 0x1000;
+const PATTERN_TABLE_LEN       : usize = 0x1000;
+const PATTERN_TABLE_ONE_START : u16 = 0x0000;
+const PATTERN_TABLE_TWO_START : u16 = 0x1000;
+
+/// The pixel width of a screen rendered by the PPU
+pub const RENDERED_SCREEN_WIDTH: usize = 256;
+/// The pixel height of a screen rendered by the PPU
+pub const RENDERED_SCREEN_HEIGHT: usize = 240;
+
+/// Representation of a screen rendered by the PPU as a 2D-array of pixel values
+pub type RenderedScreen = [[u8; RENDERED_SCREEN_WIDTH]; RENDERED_SCREEN_HEIGHT];
 
 lazy_static! {
     // A mapping between the byte used in the image and sprite palettes and the colors the bytes
@@ -92,16 +101,36 @@ pub enum PatternTable {
 }
 
 /// Read from video memory at the given address for the given number of bytes
-fn read_from(vram: &mut VideoMemory, addr: u16, len: usize) -> Result<Vec<u8>, &'static str> {
+fn read_from(vram: &mut VideoMemory, addr: u16, len: usize) -> Vec<u8> {
     let mut data = vec![];
     let addr_start = addr as usize;
     for i in addr_start..(addr_start + len) {
         data.push(vram.read(i as u16));
     }
-    Ok(data)
+    data
 }
 
+/// Get the pattern table from the video memory
+/// 
+/// Arguments: 
+/// * `vram` (`VideoMemory`): the video memory to read from
+/// * `table` (`PatternTable`): the pattern table to read
+/// 
+/// Return (`[u8; PATTERN_TABLE_LEN]`): the pattern table
 pub fn get_pattern_table(vram: &mut VideoMemory, table: PatternTable) -> [u8; PATTERN_TABLE_LEN] {
-    [0; PATTERN_TABLE_LEN]    
+    let pattern_table_vec = match table {
+        PatternTable::One => read_from(vram, PATTERN_TABLE_ONE_START, PATTERN_TABLE_LEN),
+        PatternTable::Two => read_from(vram, PATTERN_TABLE_TWO_START, PATTERN_TABLE_LEN)
+    };
+
+    let mut pattern_table = [0; PATTERN_TABLE_LEN];
+    for i in 0..PATTERN_TABLE_LEN {
+        pattern_table[i] = pattern_table_vec[i];
+    }
+    pattern_table
 }
 
+/// TODO
+pub fn render_screen(vram: &mut VideoMemory) -> RenderedScreen {
+    [[0; RENDERED_SCREEN_WIDTH]; RENDERED_SCREEN_HEIGHT]
+}

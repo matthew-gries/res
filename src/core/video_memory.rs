@@ -1,5 +1,5 @@
-use crate::memory::Memory;
-use crate::memory::MemorySegmentation;
+use crate::core::memory::Memory;
+use crate::core::memory::MemorySegmentation;
 
 /// The size of the addressable range for the video memory
 pub const VIDEO_MEMORY_MAP_ADDRESSABLE_RANGE: usize = 0x10000;

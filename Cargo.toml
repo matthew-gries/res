@@ -9,3 +9,11 @@ edition = "2018"
 [dependencies]
 lazy_static = "1.4.0"
 log = "0.4.6"
+
+[lib]
+name = "res"
+path = "src/lib.rs"
+
+[[bin]]
+name = "res"
+path = "src/main.rs"

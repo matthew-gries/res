@@ -1,8 +1,8 @@
-use crate::instruction::Instruction;
-use crate::instruction::instruction_func;
-use crate::instruction::INSTRUCTION_TABLE;
-use crate::memory::Memory;
-use crate::main_memory::MainMemory;
+use crate::core::instruction::Instruction;
+use crate::core::instruction::instruction_func;
+use crate::core::instruction::INSTRUCTION_TABLE;
+use crate::core::memory::Memory;
+use crate::core::main_memory::MainMemory;
 
 // Constants to represent the PPU registers in the main memory
 const PPU_CONTROL_1: u16 = 0x2000;
