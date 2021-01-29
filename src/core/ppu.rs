@@ -1,20 +1,22 @@
 use crate::core::memory::Memory;
+use crate::core::main_memory::MainMemory;
 use crate::core::video_memory::VideoMemory;
 
 use std::collections::HashMap;
 
-/// The length of each pattern table
-const PATTERN_TABLE_LEN       : usize = 0x1000;
-const PATTERN_TABLE_ONE_START : u16 = 0x0000;
-const PATTERN_TABLE_TWO_START : u16 = 0x1000;
+/// The number of PPU cycles per scanline
+const PPU_CYCLES_PER_SCANLINE: i32 = 341;
+/// The number of PPU scanlines
+const PPU_SCANLINE_COUNT: i32 = 262;
+/// The scanline to set VBlank on
+const SET_VBLANK_ON_SCANLINE: i32 = 241;
+/// The scanline to set VBlank off
+const SET_VBLANK_OFF_SCANLINE: i32 = -1;
+/// The cycle to change VBlank on
+const CHANGE_VBLANK_CYCLE: i32 = 1;
 
-/// The pixel width of a screen rendered by the PPU
-pub const RENDERED_SCREEN_WIDTH: usize = 256;
-/// The pixel height of a screen rendered by the PPU
-pub const RENDERED_SCREEN_HEIGHT: usize = 240;
-
-/// Representation of a screen rendered by the PPU as a 2D-array of pixel values
-pub type RenderedScreen = [[u8; RENDERED_SCREEN_WIDTH]; RENDERED_SCREEN_HEIGHT];
+/// The address in the system memory where the PPU reports its status
+pub const PPU_STATUS_REGISTER_ADDR: u16 = 0x2002;
 
 lazy_static! {
     // A mapping between the byte used in the image and sprite palettes and the colors the bytes
@@ -91,46 +93,64 @@ lazy_static! {
     };
 }
 
-/// Enumeration of all pattern tables the PPU can read from
-#[derive(Debug, Copy, Clone)]
-pub enum PatternTable {
-    /// The first pattern table
-    One,
-    /// The second pattern table
-    Two
+/// Representation of a picture processing unit (PPU) in the NES system
+pub struct PPU {
+    /// The current PPU clock cycle for the current scanline. Always between 0 and 340, inclusive
+    cycle: i32,
+    /// The current scanline. Always between -1 and 260, inclusive
+    scanline: i32,
+    /// Flag to determine if the PPU is in VBlank
+    vblank: bool
 }
 
-/// Read from video memory at the given address for the given number of bytes
-fn read_from(vram: &mut VideoMemory, addr: u16, len: usize) -> Vec<u8> {
-    let mut data = vec![];
-    let addr_start = addr as usize;
-    for i in addr_start..(addr_start + len) {
-        data.push(vram.read(i as u16));
+impl PPU {
+
+    /// Construct a new Ppu at cycle 0 and scanline -1. The PPU is not in VBlank by default
+    /// 
+    /// Return (`Ppu`): the new PPU
+    pub fn new() -> Self {
+        PPU {cycle: 0, scanline: -1, vblank: false}
     }
-    data
-}
 
-/// Get the pattern table from the video memory
-/// 
-/// Arguments: 
-/// * `vram` (`VideoMemory`): the video memory to read from
-/// * `table` (`PatternTable`): the pattern table to read
-/// 
-/// Return (`[u8; PATTERN_TABLE_LEN]`): the pattern table
-pub fn get_pattern_table(vram: &mut VideoMemory, table: PatternTable) -> [u8; PATTERN_TABLE_LEN] {
-    let pattern_table_vec = match table {
-        PatternTable::One => read_from(vram, PATTERN_TABLE_ONE_START, PATTERN_TABLE_LEN),
-        PatternTable::Two => read_from(vram, PATTERN_TABLE_TWO_START, PATTERN_TABLE_LEN)
-    };
+    /// Undergo a single PPU clock cycle, doing all necessary updates to the PPU
+    /// 
+    /// Arguments: 
+    /// * `cpu_mem` (`MainMemory`): the CPU's memory
+    pub fn ppu_cycle(&mut self, cpu_mem: &mut MainMemory) {
 
-    let mut pattern_table = [0; PATTERN_TABLE_LEN];
-    for i in 0..PATTERN_TABLE_LEN {
-        pattern_table[i] = pattern_table_vec[i];
+        self.update_cycle_and_scanline();
+        self.update_vblank_if_needed();
+        self.update_status_register(cpu_mem);
     }
-    pattern_table
-}
 
-/// TODO
-pub fn render_screen(vram: &mut VideoMemory) -> RenderedScreen {
-    [[0; RENDERED_SCREEN_WIDTH]; RENDERED_SCREEN_HEIGHT]
+    /// Update the scanline and scanline cycle
+    fn update_cycle_and_scanline(&mut self) {
+
+        if self.cycle == PPU_CYCLES_PER_SCANLINE - 1 {
+            self.scanline = if self.scanline == PPU_SCANLINE_COUNT - 2 { -1 } else { self.scanline + 1 };
+        }
+
+        self.cycle = (self.cycle + 1) % PPU_CYCLES_PER_SCANLINE;
+    }
+
+    /// Set or unset the VBlank flag on specific scanlines and cycles
+    fn update_vblank_if_needed(&mut self) {
+        if self.scanline == SET_VBLANK_ON_SCANLINE && self.cycle == CHANGE_VBLANK_CYCLE {
+            self.vblank = true;
+        } else if self.scanline == SET_VBLANK_OFF_SCANLINE && self.cycle == CHANGE_VBLANK_CYCLE {
+            self.vblank = false;
+        }
+    }
+
+    /// Update the PPU status register at CPU address 0x2002
+    fn update_status_register(&self, cpu_mem: &mut MainMemory) {
+
+        let mut status: u8 = 0;
+
+        if self.vblank {
+            status |= 0x80;
+        }
+
+        cpu_mem.write(PPU_STATUS_REGISTER_ADDR, status);
+    }
 }

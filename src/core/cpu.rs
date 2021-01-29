@@ -4,17 +4,7 @@ use crate::core::instruction::INSTRUCTION_TABLE;
 use crate::core::memory::Memory;
 use crate::core::main_memory::MainMemory;
 
-// Constants to represent the PPU registers in the main memory
-const PPU_CONTROL_1: u16 = 0x2000;
-const PPU_CONTROL_2: u16 = 0x2001;
-const PPU_STATUS:    u16 = 0x2002;
-const SPR_RAM_ADDR:  u16 = 0x2003;
-const SPR_RAM_IO:    u16 = 0x2004;
-const VRAM_ADDR_1:   u16 = 0x2005;
-const VRAM_ADDR_2:   u16 = 0x2006;
-const VRAM_ADDR_IO:  u16 = 0x2007;
-const SPRITE_DMA:    u16 = 0x4014;
-
+use crate::core::ppu::PPU_STATUS_REGISTER_ADDR;
 
 /// Structure for handling the status register of the CPU
 pub struct StatusRegister {
@@ -100,7 +90,9 @@ pub struct CPU {
     /// The program counter
     pub pc: u16,
     /// The status register
-    pub p: StatusRegister
+    pub p: StatusRegister,
+    /// `true` if the PPU is already in VBlank, `false` if the PPU is not already in VBlank
+    is_ppu_already_in_vblank: bool
 }
 
 impl CPU {
@@ -109,7 +101,7 @@ impl CPU {
     /// 
     /// Return (`CPU`): a new CPU object
     pub fn new() -> Self {
-        CPU{a: 0, x:0, y: 0, sp: 0, pc: 0, p: StatusRegister::new()}
+        CPU{a: 0, x:0, y: 0, sp: 0, pc: 0, p: StatusRegister::new(), is_ppu_already_in_vblank: false}
     }
 
     /// Perform a reset interrupt request, which involves setting the program counter to the
@@ -260,11 +252,14 @@ impl CPU {
     /// Arguments: 
     /// * `memory` (`MainMemory`): the system memory to use with this CPU
     pub fn instruction_cycle(&mut self, memory: &mut MainMemory) {
-        println!("{:x}", self.pc);
+
+        self.check_ppu_status_and_update(memory);
 
         let opcode = self.read_byte_and_increment(memory);
 	
         let instr = INSTRUCTION_TABLE.get(&opcode);
+
+        println!("{:x}: {:x}", self.pc, opcode);
 
         let instr = match instr {
             Some(i) => i,
@@ -331,8 +326,49 @@ impl CPU {
         };
 
         // loop the number of cycles it took to complete the instruction
-        while cycles != 0 {
+        while cycles > 0 {
             cycles -= 1;
         }
+    }
+}
+
+// helper functions
+impl CPU {
+
+    /// Check the PPU status register flags and perform the necessary CPU operations. The PPU status register is zeroed when
+    /// read
+    /// 
+    /// Arguments: 
+    /// * `memory` (`MainMemory`) : the memory to use
+    fn check_ppu_status_and_update(&mut self, memory: &mut MainMemory) {
+
+        let status = memory.read(PPU_STATUS_REGISTER_ADDR);
+
+        self.check_vblank(memory, status);
+
+        memory.write(PPU_STATUS_REGISTER_ADDR, 0x0);
+    }
+
+    /// Check the VBlank flag of the PPU status and perform an NMI. TODO when do we do an NMI?
+    /// 
+    /// Arguments:
+    /// * `memory` (`MainMemory`): the memory the CPU reads from
+    /// * `status` (`u8`): the PPU status flag
+    fn check_vblank(&mut self, memory: &mut MainMemory, status: u8) {
+
+        if Self::is_ppu_in_vblank(status) && !self.is_ppu_already_in_vblank {
+            let mut cycles = self.nmi(memory);
+            self.is_ppu_already_in_vblank = true;
+            while cycles > 0 {
+                cycles -= 1;
+            }
+        } else if !Self::is_ppu_in_vblank(status) && self.is_ppu_already_in_vblank {
+            self.is_ppu_already_in_vblank = false;
+        }
+    }
+
+    /// Check if the PPU is in VBlank
+    fn is_ppu_in_vblank(status: u8) -> bool {
+        status & 0x80 == 0x80
     }
 }

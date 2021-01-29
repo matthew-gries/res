@@ -1,4 +1,5 @@
 use crate::core::cpu::CPU;
+use crate::core::ppu::PPU;
 use crate::core::mapper;
 use crate::core::memory::Memory;
 use crate::core::main_memory::MainMemory;
@@ -15,7 +16,10 @@ const HEADER_SIZE: usize = 16;
 
 pub struct NesSystem {
     cpu: CPU,
-    memory: MainMemory
+    ppu: PPU,
+    memory: MainMemory,
+    // TODO: is this synced to cpu or ppu? for now just do PPU
+    sys_clock: u64
 }
 
 enum FileHeader {
@@ -57,7 +61,14 @@ impl NesSystem {
     /// Start the system
     pub fn run(&mut self) {
         loop {
-            self.cpu.instruction_cycle(&mut self.memory);
+
+            if self.sys_clock % 3 == 0 {
+                self.cpu.instruction_cycle(&mut self.memory);
+            }
+
+            self.ppu.ppu_cycle(&mut self.memory);
+
+            self.sys_clock += 1;
         }
     }
     
@@ -80,7 +91,8 @@ impl NesSystem {
         }
 
         let cpu = CPU::new();
-        Ok(NesSystem{cpu, memory})
+        let ppu = PPU::new();
+        Ok(NesSystem{cpu, ppu, memory, sys_clock: 0})
     }
 }
 
