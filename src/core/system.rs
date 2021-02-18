@@ -1,9 +1,10 @@
 use crate::core::cpu::CPU;
 use crate::core::ppu::PPU;
-use crate::core::mapper;
-use crate::core::memory::Memory;
 use crate::core::main_memory::MainMemory;
 use crate::core::main_memory::MAIN_MEMORY_MAP_ADDRESSABLE_RANGE;
+use crate::core::mapper::header::{HEADER_SIZE, FileHeader};
+use crate::core::mapper::mapper;
+use crate::core::mapper::header;
 
 use nes_system_error::NesSystemError;
 
@@ -12,40 +13,12 @@ use std::io::prelude::*;
 use std::u16;
 use std::convert::TryFrom;
 
-const HEADER_SIZE: usize = 16;
-
 pub struct NesSystem {
     cpu: CPU,
     ppu: PPU,
     memory: MainMemory,
     // TODO: is this synced to cpu or ppu? for now just do PPU
     sys_clock: u64
-}
-
-enum FileHeader {
-    INes([u8; HEADER_SIZE]),
-    Nes2_0([u8; HEADER_SIZE]),
-}
-
-struct CommonINESInfo {
-    pub mirroring: u8,
-    pub contains_cartridge_battery_backed: bool, // at $6000-7FFF
-    pub trainer: bool, // 512-byte at $7000-71FF
-    pub ignore_mirroring_ctrl: bool, // instead provide 4-screen VRAM
-    pub mapper: u8,
-    pub vs_unisystem: bool,
-    pub playchoice_10: bool,
-}
-
-struct INESInfo {
-    pub nes_info: CommonINESInfo,
-    // flag 8, not widely used
-    pub prg_ram_size: u8, 
-    // flag 9, not usually used
-    pub tv_system: u8, // this is also set by flag 10, but flag 10 is not in spec so we use flag 9 
-    // flag 10, not usually honored
-    pub prg_ram: bool, // at $6000-7FFF
-    pub bus_conflicts: bool, 
 }
 
 impl NesSystem {
@@ -108,18 +81,6 @@ impl NesSystem {
         }
     }
 
-    fn check_ines_format_name(header_buf: &[u8; HEADER_SIZE]) -> bool {
-        let n = 0x4E;
-        let e = 0x45;
-        let s = 0x53;
-        let eof = 0x1A;
-        header_buf[0] == n && header_buf[1] == e && header_buf[2] == s && header_buf[3] == eof
-    }
-
-    fn check_nes_2_0_format(header_buf: &[u8; HEADER_SIZE]) -> bool {
-        Self::check_ines_format_name(header_buf) && (header_buf[7] & 0x0C == 0x08)
-    }
-
     fn find_file_header(rom: &mut File) -> Result<FileHeader, NesSystemError> {
         // read first four bytes from header to check for 'NES' constant
         let mut header_buf: [u8; HEADER_SIZE] = [0; HEADER_SIZE];
@@ -127,9 +88,9 @@ impl NesSystem {
         Self::read_from_rom(rom, &mut header_buf)?;
 
         // check for iNES format
-        if Self::check_ines_format_name(&header_buf) {
+        if header::check_ines_format_name(&header_buf) {
             // check for NES 2.0 format
-            if Self::check_nes_2_0_format(&header_buf) { 
+            if header::check_nes_2_0_format(&header_buf) { 
                 Ok(FileHeader::Nes2_0(header_buf))
             } else {
                 Ok(FileHeader::INes(header_buf))
@@ -140,42 +101,13 @@ impl NesSystem {
 
     }
 
-    fn generate_i_nes_info(header: &[u8; HEADER_SIZE]) -> INESInfo {
-        let mirroring = header[6] & 0x1;
-        let contains_cartridge_battery_backed = (header[6] & 0x2) >> 1 != 0;
-        let trainer = (header[6] & 0x4) >> 2 != 0;
-        let ignore_mirroring_ctrl = (header[6] & 0x8) >> 3 != 0;
-        let mapper_low = (header[6] & 0xF0) >> 4;
-        let mapper_high = header[7] & 0xF0;
-        let mapper = mapper_high | mapper_low;
-        let vs_unisystem = (header[7] & 0x1) != 0;
-        let playchoice_10 = (header[7] & 0x2) >> 1 != 0;
-        let nes_info = CommonINESInfo{
-            mirroring,
-            contains_cartridge_battery_backed,
-            trainer,
-            ignore_mirroring_ctrl,
-            mapper,
-            vs_unisystem,
-            playchoice_10,
-        };
-
-        let prg_ram_size = header[8];
-
-        let tv_system = header[9] & 0x1;
-        let prg_ram = (header[10] & 0x10) >> 4 != 0;
-        let bus_conflicts = (header[10] & 0x20) >> 5 != 0;
-
-        INESInfo{nes_info, prg_ram_size, tv_system, prg_ram, bus_conflicts}
-    }
-
     fn i_nes_handler(rom: &mut File, header: &[u8; HEADER_SIZE], memory: &mut MainMemory) -> Result<(), NesSystemError> {
 
         // get the size of the PRG ROM
         let prg_rom_bytes: usize = header[4] as usize;
         let _chr_rom_bytes: usize = header[5] as usize; // if this value is 0, the board uses CHR-RAM
         
-        let ines_info = Self::generate_i_nes_info(header);
+        let ines_info = header::generate_i_nes_info(header);
         let map = mapper::INES_1_0_MAPPER_TABLE.get(&ines_info.nes_info.mapper);
         let map = match map {
             Some(m) => m,
@@ -231,7 +163,7 @@ impl NesSystem {
 
 }
 
-mod nes_system_error {
+pub mod nes_system_error {
 
     use std::error::Error;
     use std::fmt;
