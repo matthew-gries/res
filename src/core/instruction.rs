@@ -1,6 +1,6 @@
+use crate::core::bus::CPUBus;
 use crate::core::cpu::CPU;
-use crate::core::main_memory::MainMemory;
-use crate::core::memory::Memory;
+use crate::core::utils;
 
 use std::collections::HashMap;
 
@@ -21,40 +21,42 @@ pub enum AddressingMode {
     IndirectIndexed // Indirect, Y
 }
 
+
+
 /// Get the operand given the addressing mode, as well as the number of extra cycles if necessary
-pub fn get_operand_using_addr_mode(mode: &AddressingMode, cpu: &mut CPU, memory: &mut MainMemory) -> (u16, usize) {
+pub fn get_operand_using_addr_mode(mode: &AddressingMode, cpu: &mut CPU, bus: &mut CPUBus) -> (u16, usize) {
 
     match *mode {
         AddressingMode::Immediate => {
-            (cpu.read_byte_and_increment(memory) as u16, 0)
+            (cpu.read_byte_and_increment(bus) as u16, 0)
         },
         AddressingMode::ZeroPage => {
-            let addr = cpu.read_byte_and_increment(memory);
+            let addr = cpu.read_byte_and_increment(bus);
             (addr as u16, 0)
         },
         AddressingMode::ZeroPageX => {
-            let addr = cpu.read_byte_and_increment(memory);
+            let addr = cpu.read_byte_and_increment(bus);
             let (addr, _) = addr.overflowing_add(cpu.x);
             (addr as u16, 0)
         },
         AddressingMode::ZeroPageY => {
-            let addr = cpu.read_byte_and_increment(memory);
+            let addr = cpu.read_byte_and_increment(bus);
             let (addr, _) = addr.overflowing_add(cpu.y);
             (addr as u16, 0)
         },
         AddressingMode::Absolute => {
-            let low_byte = cpu.read_byte_and_increment(memory);
-            let high_byte = cpu.read_byte_and_increment(memory);
+            let low_byte = cpu.read_byte_and_increment(bus);
+            let high_byte = cpu.read_byte_and_increment(bus);
             let addr = ((high_byte as u16) << 8) | low_byte as u16;
             (addr, 0)
         },
         AddressingMode::AbsoluteX => {
-            let low_byte = cpu.read_byte_and_increment(memory);
-            let high_byte = cpu.read_byte_and_increment(memory);
+            let low_byte = cpu.read_byte_and_increment(bus);
+            let high_byte = cpu.read_byte_and_increment(bus);
             let addr_old = ((high_byte as u16) << 8) | low_byte as u16;
             let (addr, _) = addr_old.overflowing_add(cpu.x as u16);
             let cycles = {
-                if MainMemory::check_if_page_crossed(addr_old, addr) {
+                if utils::check_if_page_crossed(addr_old, addr) {
                     1
                 } else {
                     0
@@ -63,12 +65,12 @@ pub fn get_operand_using_addr_mode(mode: &AddressingMode, cpu: &mut CPU, memory:
             (addr, cycles)
         },
         AddressingMode::AbsoluteY => {
-            let low_byte = cpu.read_byte_and_increment(memory);
-            let high_byte = cpu.read_byte_and_increment(memory);
+            let low_byte = cpu.read_byte_and_increment(bus);
+            let high_byte = cpu.read_byte_and_increment(bus);
             let addr_old = ((high_byte as u16) << 8) | low_byte as u16;
             let (addr, _) = addr_old.overflowing_add(cpu.y as u16);
             let cycles = {
-                if MainMemory::check_if_page_crossed(addr_old, addr) {
+                if utils::check_if_page_crossed(addr_old, addr) {
                     1
                 } else {
                     0
@@ -77,40 +79,40 @@ pub fn get_operand_using_addr_mode(mode: &AddressingMode, cpu: &mut CPU, memory:
             (addr, cycles)
         },
         AddressingMode::Indirect => {
-            let low_byte_ind = cpu.read_byte_and_increment(memory);
-            let high_byte_ind = cpu.read_byte_and_increment(memory);
+            let low_byte_ind = cpu.read_byte_and_increment(bus);
+            let high_byte_ind = cpu.read_byte_and_increment(bus);
             if low_byte_ind == 0xFF {
                 log::warn!("Low-byte of indirect vector landed at end of page!");
             }
             let addr_ind = ((high_byte_ind as u16) << 8) | low_byte_ind as u16;
 
-            let low_byte = memory.read(addr_ind);
-            let high_byte = memory.read(addr_ind.overflowing_add(1).0);
+            let low_byte = bus.read(addr_ind);
+            let high_byte = bus.read(addr_ind.overflowing_add(1).0);
             let addr = ((high_byte as u16) << 8) | low_byte as u16;
             (addr, 0)
         },
         AddressingMode::Implied | AddressingMode::Accumulator => (0, 0),
         AddressingMode::Relative => {
-            (cpu.read_byte_and_increment(memory) as u16 , 0)
+            (cpu.read_byte_and_increment(bus) as u16 , 0)
         },
         AddressingMode::IndexedIndirect => {
-            let addr = cpu.read_byte_and_increment(memory);
+            let addr = cpu.read_byte_and_increment(bus);
             let (low_byte_addr, _) = addr.overflowing_add(cpu.x);
             let (high_byte_addr, _) = low_byte_addr.overflowing_add(1);
-            let low_byte = memory.read(low_byte_addr as u16);
-            let high_byte = memory.read(high_byte_addr as u16);
+            let low_byte = bus.read(low_byte_addr as u16);
+            let high_byte = bus.read(high_byte_addr as u16);
             let addr = ((high_byte as u16) << 8) | low_byte as u16;
             (addr, 0)
         },
         AddressingMode::IndirectIndexed => {
-            let low_byte_addr = cpu.read_byte_and_increment(memory);
+            let low_byte_addr = cpu.read_byte_and_increment(bus);
             let (high_byte_addr, _) = low_byte_addr.overflowing_add(1);
-            let low_byte = memory.read(low_byte_addr as u16);
-            let high_byte = memory.read(high_byte_addr as u16);
+            let low_byte = bus.read(low_byte_addr as u16);
+            let high_byte = bus.read(high_byte_addr as u16);
             let addr_old = ((high_byte as u16) << 8) | low_byte as u16;
             let (addr, _) = addr_old.overflowing_add(cpu.y as u16);
             let cycles = {
-                if MainMemory::check_if_page_crossed(addr_old, addr) {
+                if utils::check_if_page_crossed(addr_old, addr) {
                     1
                 } else {
                     0
@@ -388,13 +390,13 @@ pub mod instruction_func {
     }
 
     /// Run an ADC instruction and return the number of cycles it took to complete the instruction
-    pub fn adc(cpu: &mut CPU, memory: &mut MainMemory, mode: &AddressingMode, time: usize) -> usize {
+    pub fn adc(cpu: &mut CPU, bus: &mut CPUBus, mode: &AddressingMode, time: usize) -> usize {
 
         let (operand, extra_cycles) = match *mode {
             AddressingMode::Immediate | AddressingMode::ZeroPage | AddressingMode::ZeroPageX
             | AddressingMode::Absolute | AddressingMode::AbsoluteX | AddressingMode::AbsoluteY
             | AddressingMode::IndexedIndirect | AddressingMode::IndirectIndexed =>
-                get_operand_using_addr_mode(mode, cpu, memory),
+                get_operand_using_addr_mode(mode, cpu, bus),
             _ => panic!("Unsupported addressing mode {:?} for ADC", *mode),
         };
 
@@ -402,7 +404,7 @@ pub mod instruction_func {
             if let AddressingMode::Immediate = *mode {
                 operand as u8
             } else {
-                memory.read(operand)
+                bus.read(operand)
             }
         };
 
@@ -425,13 +427,13 @@ pub mod instruction_func {
         cycles
     }
 
-    pub fn and(cpu: &mut CPU, memory: &mut MainMemory, mode: &AddressingMode, time: usize) -> usize {
+    pub fn and(cpu: &mut CPU, bus: &mut CPUBus, mode: &AddressingMode, time: usize) -> usize {
         
         let (operand, extra_cycles) = match *mode {
             AddressingMode::Immediate | AddressingMode::ZeroPage | AddressingMode::ZeroPageX
             | AddressingMode::Absolute | AddressingMode::AbsoluteX | AddressingMode::AbsoluteY
             | AddressingMode::IndexedIndirect | AddressingMode::IndirectIndexed =>
-                get_operand_using_addr_mode(mode, cpu, memory),
+                get_operand_using_addr_mode(mode, cpu, bus),
             _ => panic!("Unsupported addressing mode {:?} for AND", *mode),
         };
 
@@ -439,7 +441,7 @@ pub mod instruction_func {
             if let AddressingMode::Immediate = *mode {
                 operand as u8
             } else {
-                memory.read(operand)
+                bus.read(operand)
             }
         };
 
@@ -452,12 +454,12 @@ pub mod instruction_func {
         cycles
     }
 
-    pub fn asl(cpu: &mut CPU, memory: &mut MainMemory, mode: &AddressingMode, time: usize) -> usize {
+    pub fn asl(cpu: &mut CPU, bus: &mut CPUBus, mode: &AddressingMode, time: usize) -> usize {
         
         let (operand, _) = match *mode {
             AddressingMode::Accumulator | AddressingMode::ZeroPage | AddressingMode::ZeroPageX
             | AddressingMode::Absolute | AddressingMode::AbsoluteX =>
-                get_operand_using_addr_mode(mode, cpu, memory),
+                get_operand_using_addr_mode(mode, cpu, bus),
             _ => panic!("Unsupported addressing mode {:?} for ASL", *mode),
         };
 
@@ -467,10 +469,10 @@ pub mod instruction_func {
                 cpu.a = cpu.a << 1;
                 (old, cpu.a)
             } else {
-                let mut op = memory.read(operand);
+                let mut op = bus.read(operand);
                 let old = op;
                 op = op << 1;
-                memory.write(operand, op);
+                bus.write(operand, op);
                 (old, op)
             }
         };
@@ -482,10 +484,10 @@ pub mod instruction_func {
         time
     }
 
-    pub fn bcc(cpu: &mut CPU, memory: &mut MainMemory, mode: &AddressingMode, time: usize) -> usize {
+    pub fn bcc(cpu: &mut CPU, bus: &mut CPUBus, mode: &AddressingMode, time: usize) -> usize {
         let (operand, _) = match *mode {
             AddressingMode::Relative =>
-                get_operand_using_addr_mode(mode, cpu, memory),
+                get_operand_using_addr_mode(mode, cpu, bus),
             _ => panic!("Unsupported addressing mode {:?} for BCC", *mode),
         };
 
@@ -495,7 +497,7 @@ pub mod instruction_func {
                 let operand = sign_extend(operand as u8);
                 let (new_pc, _) = cpu.pc.overflowing_add(operand);
                 cpu.pc = new_pc;
-                if MainMemory::check_if_page_crossed(old_pc, cpu.pc) {
+                if utils::check_if_page_crossed(old_pc, cpu.pc) {
                     2 
                 } else {
                     1
@@ -509,10 +511,10 @@ pub mod instruction_func {
         cycles
     }
 
-    pub fn bcs(cpu: &mut CPU, memory: &mut MainMemory, mode: &AddressingMode, time: usize) -> usize {
+    pub fn bcs(cpu: &mut CPU, bus: &mut CPUBus, mode: &AddressingMode, time: usize) -> usize {
         let (operand, _) = match *mode {
             AddressingMode::Relative =>
-                get_operand_using_addr_mode(mode, cpu, memory),
+                get_operand_using_addr_mode(mode, cpu, bus),
             _ => panic!("Unsupported addressing mode {:?} for BCS", *mode),
         };
 
@@ -523,7 +525,7 @@ pub mod instruction_func {
                 let operand = sign_extend(operand as u8);
                 let (new_pc, _) = cpu.pc.overflowing_add(operand);
                 cpu.pc = new_pc;
-                if MainMemory::check_if_page_crossed(old_pc, cpu.pc) {
+                if utils::check_if_page_crossed(old_pc, cpu.pc) {
                     2 
                 } else {
                     1
@@ -537,10 +539,10 @@ pub mod instruction_func {
         cycles
     }
 
-    pub fn beq(cpu: &mut CPU, memory: &mut MainMemory, mode: &AddressingMode, time: usize) -> usize {
+    pub fn beq(cpu: &mut CPU, bus: &mut CPUBus, mode: &AddressingMode, time: usize) -> usize {
         let (operand, _) = match *mode {
             AddressingMode::Relative =>
-                get_operand_using_addr_mode(mode, cpu, memory),
+                get_operand_using_addr_mode(mode, cpu, bus),
             _ => panic!("Unsupported addressing mode {:?} for BEQ", *mode),
         };
 
@@ -550,7 +552,7 @@ pub mod instruction_func {
                 let operand = sign_extend(operand as u8);
                 let (new_pc, _) = cpu.pc.overflowing_add(operand);
                 cpu.pc = new_pc;
-                if MainMemory::check_if_page_crossed(old_pc, cpu.pc) {
+                if utils::check_if_page_crossed(old_pc, cpu.pc) {
                     2 
                 } else {
                     1
@@ -564,10 +566,10 @@ pub mod instruction_func {
         cycles
     }
 
-    pub fn bne(cpu: &mut CPU, memory: &mut MainMemory, mode: &AddressingMode, time: usize) -> usize {
+    pub fn bne(cpu: &mut CPU, bus: &mut CPUBus, mode: &AddressingMode, time: usize) -> usize {
         let (operand, _) = match *mode {
             AddressingMode::Relative =>
-                get_operand_using_addr_mode(mode, cpu, memory),
+                get_operand_using_addr_mode(mode, cpu, bus),
             _ => panic!("Unsupported addressing mode {:?} for BNE", *mode),
         };
 
@@ -577,7 +579,7 @@ pub mod instruction_func {
                 let operand = sign_extend(operand as u8);
                 let (new_pc, _) = cpu.pc.overflowing_add(operand);
                 cpu.pc = new_pc;
-                if MainMemory::check_if_page_crossed(old_pc, cpu.pc) {
+                if utils::check_if_page_crossed(old_pc, cpu.pc) {
                     2 
                 } else {
                     1
@@ -591,10 +593,10 @@ pub mod instruction_func {
         cycles
     }
 
-    pub fn bmi(cpu: &mut CPU, memory: &mut MainMemory, mode: &AddressingMode, time: usize) -> usize {
+    pub fn bmi(cpu: &mut CPU, bus: &mut CPUBus, mode: &AddressingMode, time: usize) -> usize {
         let (operand, _) = match *mode {
             AddressingMode::Relative =>
-                get_operand_using_addr_mode(mode, cpu, memory),
+                get_operand_using_addr_mode(mode, cpu, bus),
             _ => panic!("Unsupported addressing mode {:?} for BMI", *mode),
         };
 
@@ -604,7 +606,7 @@ pub mod instruction_func {
                 let operand = sign_extend(operand as u8);
                 let (new_pc, _) = cpu.pc.overflowing_add(operand);
                 cpu.pc = new_pc;
-                if MainMemory::check_if_page_crossed(old_pc, cpu.pc) {
+                if utils::check_if_page_crossed(old_pc, cpu.pc) {
                     2 
                 } else {
                     1
@@ -618,10 +620,10 @@ pub mod instruction_func {
         cycles
     }
 
-    pub fn bpl(cpu: &mut CPU, memory: &mut MainMemory, mode: &AddressingMode, time: usize) -> usize {
+    pub fn bpl(cpu: &mut CPU, bus: &mut CPUBus, mode: &AddressingMode, time: usize) -> usize {
         let (operand, _) = match *mode {
             AddressingMode::Relative =>
-                get_operand_using_addr_mode(mode, cpu, memory),
+                get_operand_using_addr_mode(mode, cpu, bus),
             _ => panic!("Unsupported addressing mode {:?} for BPL", *mode),
         };
 
@@ -631,7 +633,7 @@ pub mod instruction_func {
                 let operand = sign_extend(operand as u8);
                 let (new_pc, _) = cpu.pc.overflowing_add(operand);
                 cpu.pc = new_pc;
-                if MainMemory::check_if_page_crossed(old_pc, cpu.pc) {
+                if utils::check_if_page_crossed(old_pc, cpu.pc) {
                     2 
                 } else {
                     1
@@ -645,10 +647,10 @@ pub mod instruction_func {
         cycles
     }
 
-    pub fn bvc(cpu: &mut CPU, memory: &mut MainMemory, mode: &AddressingMode, time: usize) -> usize {
+    pub fn bvc(cpu: &mut CPU, bus: &mut CPUBus, mode: &AddressingMode, time: usize) -> usize {
         let (operand, _) = match *mode {
             AddressingMode::Relative =>
-                get_operand_using_addr_mode(mode, cpu, memory),
+                get_operand_using_addr_mode(mode, cpu, bus),
             _ => panic!("Unsupported addressing mode {:?} for BVC", *mode),
         };
 
@@ -658,7 +660,7 @@ pub mod instruction_func {
                 let operand = sign_extend(operand as u8);
                 let (new_pc, _) = cpu.pc.overflowing_add(operand);
                 cpu.pc = new_pc;
-                if MainMemory::check_if_page_crossed(old_pc, cpu.pc) {
+                if utils::check_if_page_crossed(old_pc, cpu.pc) {
                     2 
                 } else {
                     1
@@ -672,10 +674,10 @@ pub mod instruction_func {
         cycles
     }
 
-    pub fn bvs(cpu: &mut CPU, memory: &mut MainMemory, mode: &AddressingMode, time: usize) -> usize {
+    pub fn bvs(cpu: &mut CPU, bus: &mut CPUBus, mode: &AddressingMode, time: usize) -> usize {
         let (operand, _) = match *mode {
             AddressingMode::Relative =>
-                get_operand_using_addr_mode(mode, cpu, memory),
+                get_operand_using_addr_mode(mode, cpu, bus),
             _ => panic!("Unsupported addressing mode {:?} for BVS", *mode),
         };
 
@@ -685,7 +687,7 @@ pub mod instruction_func {
                 let operand = sign_extend(operand as u8);
                let (new_pc, _) = cpu.pc.overflowing_add(operand);
                 cpu.pc = new_pc;
-                if MainMemory::check_if_page_crossed(old_pc, cpu.pc) {
+                if utils::check_if_page_crossed(old_pc, cpu.pc) {
                     2 
                 } else {
                     1
@@ -699,15 +701,15 @@ pub mod instruction_func {
         cycles
     }
 
-    pub fn bit(cpu: &mut CPU, memory: &mut MainMemory, mode: &AddressingMode, time: usize) -> usize {
+    pub fn bit(cpu: &mut CPU, bus: &mut CPUBus, mode: &AddressingMode, time: usize) -> usize {
 
         let (operand, _) = match *mode {
             AddressingMode::ZeroPage | AddressingMode::Absolute =>
-                get_operand_using_addr_mode(mode, cpu, memory),
+                get_operand_using_addr_mode(mode, cpu, bus),
             _ => panic!("Unsupported addressing mode {:?} for BIT", *mode),
         };
 
-        let result = memory.read(operand);
+        let result = bus.read(operand);
 
         cpu.p.z = (result & cpu.a) == 0;
         cpu.p.n = (result & 0x80 >> 7) != 0;
@@ -716,10 +718,10 @@ pub mod instruction_func {
         time
     }
 
-    pub fn brk(cpu: &mut CPU, memory: &mut MainMemory, mode: &AddressingMode, time: usize) -> usize {
+    pub fn brk(cpu: &mut CPU, bus: &mut CPUBus, mode: &AddressingMode, time: usize) -> usize {
         let (_, _) = match *mode {
             AddressingMode::Implied =>
-                get_operand_using_addr_mode(mode, cpu, memory),
+                get_operand_using_addr_mode(mode, cpu, bus),
             _ => panic!("Unsupported addressing mode {:?} for BRK", *mode),
         };
 
@@ -734,21 +736,21 @@ pub mod instruction_func {
         cpu.p.i = true;
         let flags = cpu.p.as_u8();
 
-        cpu.push_stack(memory, pc_low_byte);
-        cpu.push_stack(memory, pc_high_byte);
-        cpu.push_stack(memory, flags);
+        cpu.push_stack(bus, pc_low_byte);
+        cpu.push_stack(bus, pc_high_byte);
+        cpu.push_stack(bus, flags);
 
-        let irq_vector = (((memory.read(0xFFFE) as u16) << 8) | memory.read(0xFFFF) as u16) as u16;
+        let irq_vector = (((bus.read(0xFFFE) as u16) << 8) | bus.read(0xFFFF) as u16) as u16;
 
         cpu.pc = irq_vector;
         
         time
     }
 
-    pub fn clc(cpu: &mut CPU, memory: &mut MainMemory, mode: &AddressingMode, time: usize) -> usize {
+    pub fn clc(cpu: &mut CPU, bus: &mut CPUBus, mode: &AddressingMode, time: usize) -> usize {
         let (_, _) = match *mode {
             AddressingMode::Implied =>
-                get_operand_using_addr_mode(mode, cpu, memory),
+                get_operand_using_addr_mode(mode, cpu, bus),
             _ => panic!("Unsupported addressing mode {:?} for CLC", *mode),
         };
 
@@ -757,10 +759,10 @@ pub mod instruction_func {
         time
     }
 
-    pub fn cld(cpu: &mut CPU, memory: &mut MainMemory, mode: &AddressingMode, time: usize) -> usize {
+    pub fn cld(cpu: &mut CPU, bus: &mut CPUBus, mode: &AddressingMode, time: usize) -> usize {
         let (_, _) = match *mode {
             AddressingMode::Implied =>
-                get_operand_using_addr_mode(mode, cpu, memory),
+                get_operand_using_addr_mode(mode, cpu, bus),
             _ => panic!("Unsupported addressing mode {:?} for CLD", *mode),
         };
         
@@ -769,10 +771,10 @@ pub mod instruction_func {
         time
     }
 
-    pub fn cli(cpu: &mut CPU, memory: &mut MainMemory, mode: &AddressingMode, time: usize) -> usize {
+    pub fn cli(cpu: &mut CPU, bus: &mut CPUBus, mode: &AddressingMode, time: usize) -> usize {
         let (_, _) = match *mode {
             AddressingMode::Implied =>
-                get_operand_using_addr_mode(mode, cpu, memory),
+                get_operand_using_addr_mode(mode, cpu, bus),
             _ => panic!("Unsupported addressing mode {:?} for CLI", *mode),
         };
         
@@ -781,10 +783,10 @@ pub mod instruction_func {
         time
     }
 
-    pub fn clv(cpu: &mut CPU, memory: &mut MainMemory, mode: &AddressingMode, time: usize) -> usize {
+    pub fn clv(cpu: &mut CPU, bus: &mut CPUBus, mode: &AddressingMode, time: usize) -> usize {
         let (_, _) = match *mode {
             AddressingMode::Implied =>
-                get_operand_using_addr_mode(mode, cpu, memory),
+                get_operand_using_addr_mode(mode, cpu, bus),
             _ => panic!("Unsupported addressing mode {:?} for CLV", *mode),
         };
         
@@ -793,12 +795,12 @@ pub mod instruction_func {
         time
     }
 
-    pub fn cmp(cpu: &mut CPU, memory: &mut MainMemory, mode: &AddressingMode, time: usize) -> usize {
+    pub fn cmp(cpu: &mut CPU, bus: &mut CPUBus, mode: &AddressingMode, time: usize) -> usize {
         let (operand, extra_cycles) = match *mode {
             AddressingMode::Immediate | AddressingMode::ZeroPage | AddressingMode::ZeroPageX
             | AddressingMode::Absolute | AddressingMode::AbsoluteX | AddressingMode::AbsoluteY
             | AddressingMode::IndexedIndirect | AddressingMode::IndirectIndexed =>
-                get_operand_using_addr_mode(mode, cpu, memory),
+                get_operand_using_addr_mode(mode, cpu, bus),
             _ => panic!("Unsupported addressing mode {:?} for CMP", *mode),
         };
 
@@ -806,7 +808,7 @@ pub mod instruction_func {
             if let AddressingMode::Immediate = *mode {
                 operand as u8
             } else {
-                memory.read(operand)
+                bus.read(operand)
             }
         };
 
@@ -818,10 +820,10 @@ pub mod instruction_func {
         cycles
     }
 
-    pub fn cpx(cpu: &mut CPU, memory: &mut MainMemory, mode: &AddressingMode, time: usize) -> usize {
+    pub fn cpx(cpu: &mut CPU, bus: &mut CPUBus, mode: &AddressingMode, time: usize) -> usize {
         let (operand, _) = match *mode {
             AddressingMode::Immediate | AddressingMode::ZeroPage | AddressingMode::Absolute =>
-                get_operand_using_addr_mode(mode, cpu, memory),
+                get_operand_using_addr_mode(mode, cpu, bus),
             _ => panic!("Unsupported addressing mode {:?} for CPX", *mode),
         };
 
@@ -829,7 +831,7 @@ pub mod instruction_func {
             if let AddressingMode::Immediate = *mode {
                 operand as u8
             } else {
-                memory.read(operand)
+                bus.read(operand)
             }
         };
 
@@ -840,10 +842,10 @@ pub mod instruction_func {
         time
     }
 
-    pub fn cpy(cpu: &mut CPU, memory: &mut MainMemory, mode: &AddressingMode, time: usize) -> usize {
+    pub fn cpy(cpu: &mut CPU, bus: &mut CPUBus, mode: &AddressingMode, time: usize) -> usize {
         let (operand, _) = match *mode {
             AddressingMode::Immediate | AddressingMode::ZeroPage | AddressingMode::Absolute =>
-                get_operand_using_addr_mode(mode, cpu, memory),
+                get_operand_using_addr_mode(mode, cpu, bus),
             _ => panic!("Unsupported addressing mode {:?} for CPY", *mode),
         };
 
@@ -851,7 +853,7 @@ pub mod instruction_func {
             if let AddressingMode::Immediate = *mode {
                 operand as u8
             } else {
-                memory.read(operand)
+                bus.read(operand)
             }
         };
 
@@ -862,18 +864,18 @@ pub mod instruction_func {
         time
     }
 
-    pub fn dec(cpu: &mut CPU, memory: &mut MainMemory, mode: &AddressingMode, time: usize) -> usize {
+    pub fn dec(cpu: &mut CPU, bus: &mut CPUBus, mode: &AddressingMode, time: usize) -> usize {
         
         let (operand, _) = match *mode {
             AddressingMode::ZeroPage | AddressingMode::ZeroPageX
                 | AddressingMode::Absolute | AddressingMode::AbsoluteX =>
-                get_operand_using_addr_mode(mode, cpu, memory),
+                get_operand_using_addr_mode(mode, cpu, bus),
             _ => panic!("Unsupported addressing mode {:?} for DEC", *mode),
         };
 
-        let result = memory.read(operand);
+        let result = bus.read(operand);
         let (result, _) = result.overflowing_sub(1);
-        memory.write(operand, result);
+        bus.write(operand, result);
 
         cpu.p.n = CPU::check_if_neg(result);
         cpu.p.z = result == 0;
@@ -881,11 +883,11 @@ pub mod instruction_func {
         time
     }
 
-    pub fn dex(cpu: &mut CPU, memory: &mut MainMemory, mode: &AddressingMode, time: usize) -> usize {
+    pub fn dex(cpu: &mut CPU, bus: &mut CPUBus, mode: &AddressingMode, time: usize) -> usize {
         
         let (_, _) = match *mode {
             AddressingMode::Implied =>
-                get_operand_using_addr_mode(mode, cpu, memory),
+                get_operand_using_addr_mode(mode, cpu, bus),
             _ => panic!("Unsupported addressing mode {:?} for DEX", *mode),
         };
 
@@ -897,11 +899,11 @@ pub mod instruction_func {
         time
     }
 
-    pub fn dey(cpu: &mut CPU, memory: &mut MainMemory, mode: &AddressingMode, time: usize) -> usize {
+    pub fn dey(cpu: &mut CPU, bus: &mut CPUBus, mode: &AddressingMode, time: usize) -> usize {
         
         let (_, _) = match *mode {
             AddressingMode::Implied =>
-                get_operand_using_addr_mode(mode, cpu, memory),
+                get_operand_using_addr_mode(mode, cpu, bus),
             _ => panic!("Unsupported addressing mode {:?} for DEY", *mode),
         };
 
@@ -913,13 +915,13 @@ pub mod instruction_func {
         time
     }
 
-    pub fn eor(cpu: &mut CPU, memory: &mut MainMemory, mode: &AddressingMode, time: usize) -> usize {
+    pub fn eor(cpu: &mut CPU, bus: &mut CPUBus, mode: &AddressingMode, time: usize) -> usize {
         
         let (operand, extra_cycles) = match *mode {
             AddressingMode::Immediate | AddressingMode::ZeroPage | AddressingMode::ZeroPageX
             | AddressingMode::Absolute | AddressingMode::AbsoluteX | AddressingMode::AbsoluteY
             | AddressingMode::IndexedIndirect | AddressingMode::IndirectIndexed =>
-                get_operand_using_addr_mode(mode, cpu, memory),
+                get_operand_using_addr_mode(mode, cpu, bus),
             _ => panic!("Unsupported addressing mode {:?} for EOR", *mode),
         };
 
@@ -927,7 +929,7 @@ pub mod instruction_func {
             if let AddressingMode::Immediate = *mode {
                 operand as u8
             } else {
-                memory.read(operand)
+                bus.read(operand)
             }
         };
 
@@ -940,18 +942,18 @@ pub mod instruction_func {
         cycles
     }
 
-    pub fn inc(cpu: &mut CPU, memory: &mut MainMemory, mode: &AddressingMode, time: usize) -> usize {
+    pub fn inc(cpu: &mut CPU, bus: &mut CPUBus, mode: &AddressingMode, time: usize) -> usize {
         
         let (operand, _) = match *mode {
             AddressingMode::ZeroPage | AddressingMode::ZeroPageX
                 | AddressingMode::Absolute | AddressingMode::AbsoluteX =>
-                get_operand_using_addr_mode(mode, cpu, memory),
+                get_operand_using_addr_mode(mode, cpu, bus),
             _ => panic!("Unsupported addressing mode {:?} for INC", *mode),
         };
 
-        let result = memory.read(operand);
+        let result = bus.read(operand);
         let (result, _) = result.overflowing_add(1);
-        memory.write(operand, result);
+        bus.write(operand, result);
 
         cpu.p.n = CPU::check_if_neg(result);
         cpu.p.z = result == 0;
@@ -959,11 +961,11 @@ pub mod instruction_func {
         time
     }
 
-    pub fn inx(cpu: &mut CPU, memory: &mut MainMemory, mode: &AddressingMode, time: usize) -> usize {
+    pub fn inx(cpu: &mut CPU, bus: &mut CPUBus, mode: &AddressingMode, time: usize) -> usize {
         
         let (_, _) = match *mode {
             AddressingMode::Implied =>
-                get_operand_using_addr_mode(mode, cpu, memory),
+                get_operand_using_addr_mode(mode, cpu, bus),
             _ => panic!("Unsupported addressing mode {:?} for INX", *mode),
         };
 
@@ -975,11 +977,11 @@ pub mod instruction_func {
         time
     }
 
-    pub fn iny(cpu: &mut CPU, memory: &mut MainMemory, mode: &AddressingMode, time: usize) -> usize {
+    pub fn iny(cpu: &mut CPU, bus: &mut CPUBus, mode: &AddressingMode, time: usize) -> usize {
         
         let (_, _) = match *mode {
             AddressingMode::Implied =>
-                get_operand_using_addr_mode(mode, cpu, memory),
+                get_operand_using_addr_mode(mode, cpu, bus),
             _ => panic!("Unsupported addressing mode {:?} for INY", *mode),
         };
 
@@ -991,11 +993,11 @@ pub mod instruction_func {
         time
     }
 
-    pub fn jmp(cpu: &mut CPU, memory: &mut MainMemory, mode: &AddressingMode, time: usize) -> usize {
+    pub fn jmp(cpu: &mut CPU, bus: &mut CPUBus, mode: &AddressingMode, time: usize) -> usize {
 
         let (operand, _) = match *mode {
             AddressingMode::Absolute | AddressingMode::Indirect =>
-                get_operand_using_addr_mode(mode, cpu, memory),
+                get_operand_using_addr_mode(mode, cpu, bus),
             _ => panic!("Unsupported addressing mod {:?} for JMP", *mode),
         };
 
@@ -1004,32 +1006,32 @@ pub mod instruction_func {
         time
     }
 
-    pub fn jsr(cpu: &mut CPU, memory: &mut MainMemory, mode: &AddressingMode, time: usize) -> usize {
+    pub fn jsr(cpu: &mut CPU, bus: &mut CPUBus, mode: &AddressingMode, time: usize) -> usize {
 
         let (operand, _) = match *mode {
             AddressingMode::Absolute =>
-                get_operand_using_addr_mode(mode, cpu, memory),
+                get_operand_using_addr_mode(mode, cpu, bus),
             _ => panic!("Unsupported addressing mod {:?} for JSR", *mode),
         };
 
         let ret_addr = cpu.pc.overflowing_sub(1).0;
         let ret_addr_low_byte = (ret_addr & 0x00FF) as u8;
         let ret_addr_high_byte = ((ret_addr & 0xFF00) >> 8) as u8;
-        cpu.push_stack(memory, ret_addr_low_byte);
-        cpu.push_stack(memory, ret_addr_high_byte);
+        cpu.push_stack(bus, ret_addr_low_byte);
+        cpu.push_stack(bus, ret_addr_high_byte);
 
         cpu.pc = operand;
 
         time
     }
 
-    pub fn lda(cpu: &mut CPU, memory: &mut MainMemory, mode: &AddressingMode, time: usize) -> usize {
+    pub fn lda(cpu: &mut CPU, bus: &mut CPUBus, mode: &AddressingMode, time: usize) -> usize {
 
         let (operand, extra_cycles) = match *mode {
             AddressingMode::Immediate | AddressingMode::ZeroPage | AddressingMode::ZeroPageX
             | AddressingMode::Absolute | AddressingMode::AbsoluteX | AddressingMode::AbsoluteY
             | AddressingMode::IndexedIndirect | AddressingMode::IndirectIndexed =>
-                get_operand_using_addr_mode(mode, cpu, memory),
+                get_operand_using_addr_mode(mode, cpu, bus),
             _ => panic!("Unsupported addressing mode {:?} for LDA", *mode),
         };
 
@@ -1037,7 +1039,7 @@ pub mod instruction_func {
             if let AddressingMode::Immediate = *mode {
                 operand as u8
             } else {
-                memory.read(operand)
+                bus.read(operand)
             }
         };
 
@@ -1050,12 +1052,12 @@ pub mod instruction_func {
         cycles
     }
 
-    pub fn ldx(cpu: &mut CPU, memory: &mut MainMemory, mode: &AddressingMode, time: usize) -> usize {
+    pub fn ldx(cpu: &mut CPU, bus: &mut CPUBus, mode: &AddressingMode, time: usize) -> usize {
 
         let (operand, extra_cycles) = match *mode {
             AddressingMode::Immediate | AddressingMode::ZeroPage | AddressingMode::ZeroPageY
             | AddressingMode::Absolute | AddressingMode::AbsoluteY =>
-                get_operand_using_addr_mode(mode, cpu, memory),
+                get_operand_using_addr_mode(mode, cpu, bus),
             _ => panic!("Unsupported addressing mode {:?} for LDX", *mode),
         };
 
@@ -1063,7 +1065,7 @@ pub mod instruction_func {
             if let AddressingMode::Immediate = *mode {
                 operand as u8
             } else {
-                memory.read(operand)
+                bus.read(operand)
             }
         };
 
@@ -1076,12 +1078,12 @@ pub mod instruction_func {
         cycles
     }
 
-    pub fn ldy(cpu: &mut CPU, memory: &mut MainMemory, mode: &AddressingMode, time: usize) -> usize {
+    pub fn ldy(cpu: &mut CPU, bus: &mut CPUBus, mode: &AddressingMode, time: usize) -> usize {
 
         let (operand, extra_cycles) = match *mode {
             AddressingMode::Immediate | AddressingMode::ZeroPage | AddressingMode::ZeroPageX
             | AddressingMode::Absolute | AddressingMode::AbsoluteX =>
-                get_operand_using_addr_mode(mode, cpu, memory),
+                get_operand_using_addr_mode(mode, cpu, bus),
             _ => panic!("Unsupported addressing mode {:?} for LDY", *mode),
         };
 
@@ -1089,7 +1091,7 @@ pub mod instruction_func {
             if let AddressingMode::Immediate = *mode {
                 operand as u8
             } else {
-                memory.read(operand)
+                bus.read(operand)
             }
         };
 
@@ -1102,12 +1104,12 @@ pub mod instruction_func {
         cycles
     }
 
-    pub fn lsr(cpu: &mut CPU, memory: &mut MainMemory, mode: &AddressingMode, time: usize) -> usize {
+    pub fn lsr(cpu: &mut CPU, bus: &mut CPUBus, mode: &AddressingMode, time: usize) -> usize {
         
         let (operand, _) = match *mode {
             AddressingMode::Accumulator | AddressingMode::ZeroPage | AddressingMode::ZeroPageX
             | AddressingMode::Absolute | AddressingMode::AbsoluteX =>
-                get_operand_using_addr_mode(mode, cpu, memory),
+                get_operand_using_addr_mode(mode, cpu, bus),
             _ => panic!("Unsupported addressing mode {:?} for LSR", *mode),
         };
 
@@ -1117,10 +1119,10 @@ pub mod instruction_func {
                 cpu.a = cpu.a >> 1;
                 (old, cpu.a)
             } else {
-                let mut op = memory.read(operand);
+                let mut op = bus.read(operand);
                 let old = op;
                 op = op >> 1;
-                memory.write(operand, op);
+                bus.write(operand, op);
                 (old, op)
             }
         };
@@ -1132,23 +1134,23 @@ pub mod instruction_func {
         time
     }
 
-    pub fn nop(cpu: &mut CPU, memory: &mut MainMemory, mode: &AddressingMode, time: usize) -> usize {
+    pub fn nop(cpu: &mut CPU, bus: &mut CPUBus, mode: &AddressingMode, time: usize) -> usize {
         let (_, _) = match *mode {
             AddressingMode::Implied =>
-                get_operand_using_addr_mode(mode, cpu, memory),
+                get_operand_using_addr_mode(mode, cpu, bus),
             _ => panic!("Unsupported addressing mode {:?} for NOP", *mode),
         };
 
         time
     }
 
-    pub fn ora(cpu: &mut CPU, memory: &mut MainMemory, mode: &AddressingMode, time: usize) -> usize {
+    pub fn ora(cpu: &mut CPU, bus: &mut CPUBus, mode: &AddressingMode, time: usize) -> usize {
         
         let (operand, extra_cycles) = match *mode {
             AddressingMode::Immediate | AddressingMode::ZeroPage | AddressingMode::ZeroPageX
             | AddressingMode::Absolute | AddressingMode::AbsoluteX | AddressingMode::AbsoluteY
             | AddressingMode::IndexedIndirect | AddressingMode::IndirectIndexed =>
-                get_operand_using_addr_mode(mode, cpu, memory),
+                get_operand_using_addr_mode(mode, cpu, bus),
             _ => panic!("Unsupported addressing mode {:?} for ORA", *mode),
         };
 
@@ -1156,7 +1158,7 @@ pub mod instruction_func {
             if let AddressingMode::Immediate = *mode {
                 operand as u8
             } else {
-                memory.read(operand)
+                bus.read(operand)
             }
         };
 
@@ -1169,41 +1171,41 @@ pub mod instruction_func {
         cycles
     }
    
-    pub fn pha(cpu: &mut CPU, memory: &mut MainMemory, mode: &AddressingMode, time: usize) -> usize {
+    pub fn pha(cpu: &mut CPU, bus: &mut CPUBus, mode: &AddressingMode, time: usize) -> usize {
         
         let (_, _) = match *mode {
             AddressingMode::Implied =>
-                get_operand_using_addr_mode(mode, cpu, memory),
+                get_operand_using_addr_mode(mode, cpu, bus),
             _ => panic!("Unsupported addressing mode {:?} for PHA", *mode),
         };
 
-        cpu.push_stack(memory, cpu.a);
+        cpu.push_stack(bus, cpu.a);
 
         time
     }
 
-    pub fn php(cpu: &mut CPU, memory: &mut MainMemory, mode: &AddressingMode, time: usize) -> usize {
+    pub fn php(cpu: &mut CPU, bus: &mut CPUBus, mode: &AddressingMode, time: usize) -> usize {
         
         let (_, _) = match *mode {
             AddressingMode::Implied =>
-                get_operand_using_addr_mode(mode, cpu, memory),
+                get_operand_using_addr_mode(mode, cpu, bus),
             _ => panic!("Unsupported addressing mode {:?} for PHP", *mode),
         };
 
-        cpu.push_stack(memory, cpu.p.as_u8());
+        cpu.push_stack(bus, cpu.p.as_u8());
 
         time
     }
 
-    pub fn pla(cpu: &mut CPU, memory: &mut MainMemory, mode: &AddressingMode, time: usize) -> usize {
+    pub fn pla(cpu: &mut CPU, bus: &mut CPUBus, mode: &AddressingMode, time: usize) -> usize {
         
         let (_, _) = match *mode {
             AddressingMode::Implied =>
-                get_operand_using_addr_mode(mode, cpu, memory),
+                get_operand_using_addr_mode(mode, cpu, bus),
             _ => panic!("Unsupported addressing mode {:?} for PLA", *mode),
         };
 
-        let a = cpu.pop_stack(memory);
+        let a = cpu.pop_stack(bus);
 
         cpu.a = a;
         cpu.p.n = CPU::check_if_neg(a);
@@ -1212,26 +1214,26 @@ pub mod instruction_func {
         time
     }
 
-    pub fn plp(cpu: &mut CPU, memory: &mut MainMemory, mode: &AddressingMode, time: usize) -> usize {
+    pub fn plp(cpu: &mut CPU, bus: &mut CPUBus, mode: &AddressingMode, time: usize) -> usize {
         
         let (_, _) = match *mode {
             AddressingMode::Implied =>
-                get_operand_using_addr_mode(mode, cpu, memory),
+                get_operand_using_addr_mode(mode, cpu, bus),
             _ => panic!("Unsupported addressing mode {:?} for PLP", *mode),
         };
 
-        let p = cpu.pop_stack(memory);
+        let p = cpu.pop_stack(bus);
 
         cpu.p.from_u8(p);
 
         time
     }
 
-    pub fn rol(cpu: &mut CPU, memory: &mut MainMemory, mode: &AddressingMode, time: usize) -> usize {
+    pub fn rol(cpu: &mut CPU, bus: &mut CPUBus, mode: &AddressingMode, time: usize) -> usize {
         let (operand, _) = match *mode {
             AddressingMode::Accumulator | AddressingMode::ZeroPage | AddressingMode::ZeroPageX
             | AddressingMode::Absolute | AddressingMode::AbsoluteX =>
-                get_operand_using_addr_mode(mode, cpu, memory),
+                get_operand_using_addr_mode(mode, cpu, bus),
             _ => panic!("Unsupported addressing mode {:?} for ROL", *mode),
         };
 
@@ -1242,11 +1244,11 @@ pub mod instruction_func {
                 cpu.a = cpu.a | (cpu.p.c as u8);
                 (old, cpu.a)
             } else {
-                let mut op = memory.read(operand);
+                let mut op = bus.read(operand);
                 let old = op;
                 op = op << 1;
                 op = op | (cpu.p.c as u8);
-                memory.write(operand, op);
+                bus.write(operand, op);
                 (old, op)
             }
         };
@@ -1258,12 +1260,12 @@ pub mod instruction_func {
         time
     }
 
-    pub fn ror(cpu: &mut CPU, memory: &mut MainMemory, mode: &AddressingMode, time: usize) -> usize {
+    pub fn ror(cpu: &mut CPU, bus: &mut CPUBus, mode: &AddressingMode, time: usize) -> usize {
         
         let (operand, _) = match *mode {
             AddressingMode::Accumulator | AddressingMode::ZeroPage | AddressingMode::ZeroPageX
             | AddressingMode::Absolute | AddressingMode::AbsoluteX =>
-                get_operand_using_addr_mode(mode, cpu, memory),
+                get_operand_using_addr_mode(mode, cpu, bus),
             _ => panic!("Unsupported addressing mode {:?} for ROR", *mode),
         };
 
@@ -1274,11 +1276,11 @@ pub mod instruction_func {
                 cpu.a = cpu.a | ((cpu.p.c as u8) << 7);
                 (old, cpu.a)
             } else {
-                let mut op = memory.read(operand);
+                let mut op = bus.read(operand);
                 let old = op;
                 op = op >> 1;
                 op = op | ((cpu.p.c as u8) << 7);
-                memory.write(operand, op);
+                bus.write(operand, op);
                 (old, op)
             }
         };
@@ -1290,17 +1292,17 @@ pub mod instruction_func {
         time
     }
 
-    pub fn rti(cpu: &mut CPU, memory: &mut MainMemory, mode: &AddressingMode, time: usize) -> usize {
+    pub fn rti(cpu: &mut CPU, bus: &mut CPUBus, mode: &AddressingMode, time: usize) -> usize {
         
         let (_, _) = match *mode {
             AddressingMode::Implied =>
-                get_operand_using_addr_mode(mode, cpu, memory),
+                get_operand_using_addr_mode(mode, cpu, bus),
             _ => panic!("Unsupported addressing mode {:?} for RTI", *mode),
         };
 
-        let flags = cpu.pop_stack(memory);
-        let pc_high = cpu.pop_stack(memory);
-        let pc_low = cpu.pop_stack(memory);
+        let flags = cpu.pop_stack(bus);
+        let pc_high = cpu.pop_stack(bus);
+        let pc_low = cpu.pop_stack(bus);
 
         let pc = ((pc_high as u16) << 8) | (pc_low as u16);
 
@@ -1310,16 +1312,16 @@ pub mod instruction_func {
         time
     }
 
-    pub fn rts(cpu: &mut CPU, memory: &mut MainMemory, mode: &AddressingMode, time: usize) -> usize {
+    pub fn rts(cpu: &mut CPU, bus: &mut CPUBus, mode: &AddressingMode, time: usize) -> usize {
         
         let (_, _) = match *mode {
             AddressingMode::Implied =>
-                get_operand_using_addr_mode(mode, cpu, memory),
+                get_operand_using_addr_mode(mode, cpu, bus),
             _ => panic!("Unsupported addressing mode {:?} for RTS", *mode),
         };
 
-        let high_byte = cpu.pop_stack(memory);
-        let low_byte = cpu.pop_stack(memory);
+        let high_byte = cpu.pop_stack(bus);
+        let low_byte = cpu.pop_stack(bus);
         let new_pc = ((high_byte as u16) << 8) | (low_byte as u16);
         let new_pc = new_pc + 1;
 
@@ -1328,11 +1330,11 @@ pub mod instruction_func {
         time
     }
 
-    pub fn sec(cpu: &mut CPU, memory: &mut MainMemory, mode: &AddressingMode, time: usize) -> usize {
+    pub fn sec(cpu: &mut CPU, bus: &mut CPUBus, mode: &AddressingMode, time: usize) -> usize {
 
         let (_, _) = match *mode {
             AddressingMode::Implied =>
-                get_operand_using_addr_mode(mode, cpu, memory),
+                get_operand_using_addr_mode(mode, cpu, bus),
             _ => panic!("Unsupported addressing mode {:?} for SEC", *mode),
         };
 
@@ -1341,10 +1343,10 @@ pub mod instruction_func {
         time
     }
 
-    pub fn sed(cpu: &mut CPU, memory: &mut MainMemory, mode: &AddressingMode, time: usize) -> usize {
+    pub fn sed(cpu: &mut CPU, bus: &mut CPUBus, mode: &AddressingMode, time: usize) -> usize {
         let (_, _) = match *mode {
             AddressingMode::Implied =>
-                get_operand_using_addr_mode(mode, cpu, memory),
+                get_operand_using_addr_mode(mode, cpu, bus),
             _ => panic!("Unsupported addressing mode {:?} for SED", *mode),
         };
         
@@ -1353,10 +1355,10 @@ pub mod instruction_func {
         time
     }
 
-    pub fn sei(cpu: &mut CPU, memory: &mut MainMemory, mode: &AddressingMode, time: usize) -> usize {
+    pub fn sei(cpu: &mut CPU, bus: &mut CPUBus, mode: &AddressingMode, time: usize) -> usize {
         let (_, _) = match *mode {
             AddressingMode::Implied =>
-                get_operand_using_addr_mode(mode, cpu, memory),
+                get_operand_using_addr_mode(mode, cpu, bus),
             _ => panic!("Unsupported addressing mode {:?} for SEI", *mode),
         };
         
@@ -1365,57 +1367,57 @@ pub mod instruction_func {
         time
     }
 
-    pub fn sta(cpu: &mut CPU, memory: &mut MainMemory, mode: &AddressingMode, time: usize) -> usize {
+    pub fn sta(cpu: &mut CPU, bus: &mut CPUBus, mode: &AddressingMode, time: usize) -> usize {
         
         let (operand, extra_cycles) = match *mode {
             AddressingMode::ZeroPage | AddressingMode::ZeroPageX | AddressingMode::Absolute
             | AddressingMode::AbsoluteX | AddressingMode::AbsoluteY | AddressingMode::IndexedIndirect
             | AddressingMode::IndirectIndexed =>
-                get_operand_using_addr_mode(mode, cpu, memory),
+                get_operand_using_addr_mode(mode, cpu, bus),
             _ => panic!("Unsupported addressing mode {:?} for STA", *mode)
         };
 
-        memory.write(operand, cpu.a);
+        bus.write(operand, cpu.a);
 
         let cycles = time + extra_cycles;
         cycles
     }
 
-    pub fn stx(cpu: &mut CPU, memory: &mut MainMemory, mode: &AddressingMode, time: usize) -> usize {
+    pub fn stx(cpu: &mut CPU, bus: &mut CPUBus, mode: &AddressingMode, time: usize) -> usize {
         
         let (operand, extra_cycles) = match *mode {
             AddressingMode::ZeroPage | AddressingMode::ZeroPageY | AddressingMode::Absolute =>
-                get_operand_using_addr_mode(mode, cpu, memory),
+                get_operand_using_addr_mode(mode, cpu, bus),
             _ => panic!("Unsupported addressing mode {:?} for STX", *mode)
         };
 
-        memory.write(operand, cpu.x);
+        bus.write(operand, cpu.x);
 
         let cycles = time + extra_cycles;
         cycles
     }
 
-    pub fn sty(cpu: &mut CPU, memory: &mut MainMemory, mode: &AddressingMode, time: usize) -> usize {
+    pub fn sty(cpu: &mut CPU, bus: &mut CPUBus, mode: &AddressingMode, time: usize) -> usize {
         
         let (operand, extra_cycles) = match *mode {
             AddressingMode::ZeroPage | AddressingMode::ZeroPageX | AddressingMode::Absolute =>
-                get_operand_using_addr_mode(mode, cpu, memory),
+                get_operand_using_addr_mode(mode, cpu, bus),
             _ => panic!("Unsupported addressing mode {:?} for STY", *mode)
         };
 
-        memory.write(operand, cpu.y);
+        bus.write(operand, cpu.y);
 
         let cycles = time + extra_cycles;
         cycles
     }
 
-    pub fn sbc(cpu: &mut CPU, memory: &mut MainMemory, mode: &AddressingMode, time: usize) -> usize {
+    pub fn sbc(cpu: &mut CPU, bus: &mut CPUBus, mode: &AddressingMode, time: usize) -> usize {
 
         let (operand, extra_cycles) = match *mode {
             AddressingMode::Immediate | AddressingMode::ZeroPage | AddressingMode::ZeroPageX
             | AddressingMode::Absolute | AddressingMode::AbsoluteX | AddressingMode::AbsoluteY
             | AddressingMode::IndexedIndirect | AddressingMode::IndirectIndexed =>
-                get_operand_using_addr_mode(mode, cpu, memory),
+                get_operand_using_addr_mode(mode, cpu, bus),
             _ => panic!("Unsupported addressing mode {:?} for SBC", *mode),
         };
 
@@ -1423,7 +1425,7 @@ pub mod instruction_func {
             if let AddressingMode::Immediate = *mode {
                 operand as u8
             } else {
-                memory.read(operand)
+                bus.read(operand)
             }
         };
 
@@ -1446,11 +1448,11 @@ pub mod instruction_func {
         cycles
     }
 
-    pub fn tax(cpu: &mut CPU, memory: &mut MainMemory, mode: &AddressingMode, time: usize) -> usize {
+    pub fn tax(cpu: &mut CPU, bus: &mut CPUBus, mode: &AddressingMode, time: usize) -> usize {
         
         let (_, _) = match *mode {
             AddressingMode::Implied =>
-                get_operand_using_addr_mode(mode, cpu, memory),
+                get_operand_using_addr_mode(mode, cpu, bus),
             _ => panic!("Unsupported addressing mode {:?} for TAX", *mode),
         };
 
@@ -1461,11 +1463,11 @@ pub mod instruction_func {
         time
     }
 
-    pub fn tay(cpu: &mut CPU, memory: &mut MainMemory, mode: &AddressingMode, time: usize) -> usize {
+    pub fn tay(cpu: &mut CPU, bus: &mut CPUBus, mode: &AddressingMode, time: usize) -> usize {
         
         let (_, _) = match *mode {
             AddressingMode::Implied =>
-                get_operand_using_addr_mode(mode, cpu, memory),
+                get_operand_using_addr_mode(mode, cpu, bus),
             _ => panic!("Unsupported addressing mode {:?} for TAY", *mode),
         };
 
@@ -1476,11 +1478,11 @@ pub mod instruction_func {
         time
     }
 
-    pub fn tsx(cpu: &mut CPU, memory: &mut MainMemory, mode: &AddressingMode, time: usize) -> usize {
+    pub fn tsx(cpu: &mut CPU, bus: &mut CPUBus, mode: &AddressingMode, time: usize) -> usize {
         
         let (_, _) = match *mode {
             AddressingMode::Implied =>
-                get_operand_using_addr_mode(mode, cpu, memory),
+                get_operand_using_addr_mode(mode, cpu, bus),
             _ => panic!("Unsupported addressing mode {:?} for TSX", *mode),
         };
 
@@ -1491,11 +1493,11 @@ pub mod instruction_func {
         time
     }
 
-    pub fn txa(cpu: &mut CPU, memory: &mut MainMemory, mode: &AddressingMode, time: usize) -> usize {
+    pub fn txa(cpu: &mut CPU, bus: &mut CPUBus, mode: &AddressingMode, time: usize) -> usize {
         
         let (_, _) = match *mode {
             AddressingMode::Implied =>
-                get_operand_using_addr_mode(mode, cpu, memory),
+                get_operand_using_addr_mode(mode, cpu, bus),
             _ => panic!("Unsupported addressing mode {:?} for TXA", *mode),
         };
 
@@ -1506,11 +1508,11 @@ pub mod instruction_func {
         time
     }
 
-    pub fn txs(cpu: &mut CPU, memory: &mut MainMemory, mode: &AddressingMode, time: usize) -> usize {
+    pub fn txs(cpu: &mut CPU, bus: &mut CPUBus, mode: &AddressingMode, time: usize) -> usize {
         
         let (_, _) = match *mode {
             AddressingMode::Implied =>
-                get_operand_using_addr_mode(mode, cpu, memory),
+                get_operand_using_addr_mode(mode, cpu, bus),
             _ => panic!("Unsupported addressing mode {:?} for TXS", *mode),
         };
 
@@ -1519,11 +1521,11 @@ pub mod instruction_func {
         time
     }
 
-    pub fn tya(cpu: &mut CPU, memory: &mut MainMemory, mode: &AddressingMode, time: usize) -> usize {
+    pub fn tya(cpu: &mut CPU, bus: &mut CPUBus, mode: &AddressingMode, time: usize) -> usize {
         
         let (_, _) = match *mode {
             AddressingMode::Implied =>
-                get_operand_using_addr_mode(mode, cpu, memory),
+                get_operand_using_addr_mode(mode, cpu, bus),
             _ => panic!("Unsupported addressing mode {:?} for TYA", *mode),
         };
 
@@ -1539,8 +1541,8 @@ pub mod instruction_func {
 mod tests {
     use super::*;
 
-    fn generate_cpu_and_mem() -> (CPU, MainMemory) {
-        (CPU::new(), MainMemory::new())
+    fn generate_cpu_and_mem() -> (CPU, CPUBus) {
+        (CPU::new(), CPUBus::new())
     }
 
     #[test]
