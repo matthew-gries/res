@@ -3,11 +3,9 @@ use crate::core::instruction::*;
 use crate::core::bus::CPUBus;
 use crate::core::cpu::CPU;
 
-
 fn generate_cpu_and_bus() -> (CPU, CPUBus) {
     (CPU::new(), CPUBus::new())
 }
-
 
 #[test]
 fn adc_imm_test_no_carry_no_overflow() {
@@ -15,7 +13,9 @@ fn adc_imm_test_no_carry_no_overflow() {
     bus.write(0, 0x69);
     bus.write(1, 0x20);
     cpu.a = 0x24;
-    let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut bus)).unwrap();
+    let instr = INSTRUCTION_TABLE
+        .get(&cpu.read_byte_and_increment(&mut bus))
+        .unwrap();
     if let Instruction::ADC(mode, time) = instr {
         let cycles = instruction_func::adc(&mut cpu, &mut bus, mode, *time);
         assert_eq!(cpu.a, 0x44);
@@ -29,14 +29,15 @@ fn adc_imm_test_no_carry_no_overflow() {
     }
 }
 
-
 #[test]
 fn adc_imm_test_zero() {
     let (mut cpu, mut bus) = generate_cpu_and_bus();
     bus.write(0, 0x69);
     bus.write(1, 0xFF);
     cpu.a = 0x01;
-    let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut bus)).unwrap();
+    let instr = INSTRUCTION_TABLE
+        .get(&cpu.read_byte_and_increment(&mut bus))
+        .unwrap();
     if let Instruction::ADC(mode, time) = instr {
         let cycles = instruction_func::adc(&mut cpu, &mut bus, mode, *time);
         assert_eq!(cpu.a, 0x00);
@@ -50,14 +51,15 @@ fn adc_imm_test_zero() {
     }
 }
 
-
 #[test]
 fn adc_imm_test_neg() {
     let (mut cpu, mut bus) = generate_cpu_and_bus();
     bus.write(0, 0x69);
     bus.write(1, 0x01);
     cpu.a = 0xFE;
-    let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut bus)).unwrap();
+    let instr = INSTRUCTION_TABLE
+        .get(&cpu.read_byte_and_increment(&mut bus))
+        .unwrap();
     if let Instruction::ADC(mode, time) = instr {
         let cycles = instruction_func::adc(&mut cpu, &mut bus, mode, *time); // will do 1 + -2
         assert_eq!(cpu.a, 0xFF);
@@ -71,14 +73,15 @@ fn adc_imm_test_neg() {
     }
 }
 
-
 #[test]
 fn adc_imm_test_no_carry_overflow() {
     let (mut cpu, mut bus) = generate_cpu_and_bus();
     bus.write(0, 0x69);
     bus.write(1, 0x50);
     cpu.a = 0x50;
-    let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut bus)).unwrap();
+    let instr = INSTRUCTION_TABLE
+        .get(&cpu.read_byte_and_increment(&mut bus))
+        .unwrap();
     if let Instruction::ADC(mode, time) = instr {
         let cycles = instruction_func::adc(&mut cpu, &mut bus, mode, *time);
         assert_eq!(cpu.a, 0xA0);
@@ -92,14 +95,15 @@ fn adc_imm_test_no_carry_overflow() {
     }
 }
 
-
 #[test]
 fn adc_imm_test_carry_no_overflow() {
     let (mut cpu, mut bus) = generate_cpu_and_bus();
     bus.write(0, 0x69);
     bus.write(1, 0x50);
     cpu.a = 0xD0;
-    let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut bus)).unwrap();
+    let instr = INSTRUCTION_TABLE
+        .get(&cpu.read_byte_and_increment(&mut bus))
+        .unwrap();
     if let Instruction::ADC(mode, time) = instr {
         let cycles = instruction_func::adc(&mut cpu, &mut bus, mode, *time);
         assert_eq!(cpu.a, 0x20);
@@ -113,14 +117,15 @@ fn adc_imm_test_carry_no_overflow() {
     }
 }
 
-
 #[test]
 fn adc_imm_test_carry_overflow() {
     let (mut cpu, mut bus) = generate_cpu_and_bus();
     bus.write(0, 0x69);
     bus.write(1, 0xD0);
     cpu.a = 0x90;
-    let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut bus)).unwrap();
+    let instr = INSTRUCTION_TABLE
+        .get(&cpu.read_byte_and_increment(&mut bus))
+        .unwrap();
     if let Instruction::ADC(mode, time) = instr {
         let cycles = instruction_func::adc(&mut cpu, &mut bus, mode, *time);
         assert_eq!(cpu.a, 0x60);
@@ -134,14 +139,15 @@ fn adc_imm_test_carry_overflow() {
     }
 }
 
-
 #[test]
 fn and_imm_test() {
     let (mut cpu, mut bus) = generate_cpu_and_bus();
     bus.write(0, 0x29);
     bus.write(1, 0xF0);
     cpu.a = 0x1F;
-    let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut bus)).unwrap();
+    let instr = INSTRUCTION_TABLE
+        .get(&cpu.read_byte_and_increment(&mut bus))
+        .unwrap();
     if let Instruction::AND(mode, time) = instr {
         let cycles = instruction_func::and(&mut cpu, &mut bus, mode, *time);
         assert_eq!(cpu.a, 0x10);
@@ -153,14 +159,15 @@ fn and_imm_test() {
     }
 }
 
-
 #[test]
 fn and_imm_zero_test() {
     let (mut cpu, mut bus) = generate_cpu_and_bus();
     bus.write(0, 0x29);
     bus.write(1, 0xF0);
     cpu.a = 0x0F;
-    let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut bus)).unwrap();
+    let instr = INSTRUCTION_TABLE
+        .get(&cpu.read_byte_and_increment(&mut bus))
+        .unwrap();
     if let Instruction::AND(mode, time) = instr {
         let cycles = instruction_func::and(&mut cpu, &mut bus, mode, *time);
         assert_eq!(cpu.a, 0x00);
@@ -172,14 +179,15 @@ fn and_imm_zero_test() {
     }
 }
 
-
 #[test]
 fn and_imm_neg_test() {
     let (mut cpu, mut bus) = generate_cpu_and_bus();
     bus.write(0, 0x29);
     bus.write(1, 0xF0);
     cpu.a = 0x8F;
-    let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut bus)).unwrap();
+    let instr = INSTRUCTION_TABLE
+        .get(&cpu.read_byte_and_increment(&mut bus))
+        .unwrap();
     if let Instruction::AND(mode, time) = instr {
         let cycles = instruction_func::and(&mut cpu, &mut bus, mode, *time);
         assert_eq!(cpu.a, 0x80);
@@ -191,13 +199,14 @@ fn and_imm_neg_test() {
     }
 }
 
-
 #[test]
 fn asl_acc_test() {
     let (mut cpu, mut bus) = generate_cpu_and_bus();
     bus.write(0, 0x0A);
     cpu.a = 0x01;
-    let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut bus)).unwrap();
+    let instr = INSTRUCTION_TABLE
+        .get(&cpu.read_byte_and_increment(&mut bus))
+        .unwrap();
     if let Instruction::ASL(mode, time) = instr {
         let cycles = instruction_func::asl(&mut cpu, &mut bus, mode, *time);
         assert_eq!(cpu.a, 0x02);
@@ -210,13 +219,14 @@ fn asl_acc_test() {
     }
 }
 
-
 #[test]
 fn asl_acc_carry_and_zero_test() {
     let (mut cpu, mut bus) = generate_cpu_and_bus();
     bus.write(0, 0x0A);
     cpu.a = 0x80;
-    let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut bus)).unwrap();
+    let instr = INSTRUCTION_TABLE
+        .get(&cpu.read_byte_and_increment(&mut bus))
+        .unwrap();
     if let Instruction::ASL(mode, time) = instr {
         let cycles = instruction_func::asl(&mut cpu, &mut bus, mode, *time);
         assert_eq!(cpu.a, 0x00);
@@ -229,13 +239,14 @@ fn asl_acc_carry_and_zero_test() {
     }
 }
 
-
 #[test]
 fn asl_acc_neg_test() {
     let (mut cpu, mut bus) = generate_cpu_and_bus();
     bus.write(0, 0x0A);
     cpu.a = 0x40;
-    let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut bus)).unwrap();
+    let instr = INSTRUCTION_TABLE
+        .get(&cpu.read_byte_and_increment(&mut bus))
+        .unwrap();
     if let Instruction::ASL(mode, time) = instr {
         let cycles = instruction_func::asl(&mut cpu, &mut bus, mode, *time);
         assert_eq!(cpu.a, 0x80);
@@ -248,7 +259,6 @@ fn asl_acc_neg_test() {
     }
 }
 
-
 #[test]
 fn asl_abs_test() {
     let (mut cpu, mut bus) = generate_cpu_and_bus();
@@ -256,7 +266,9 @@ fn asl_abs_test() {
     bus.write(1, 0x40);
     bus.write(2, 0x01);
     bus.write(0x0140, 0x01);
-    let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut bus)).unwrap();
+    let instr = INSTRUCTION_TABLE
+        .get(&cpu.read_byte_and_increment(&mut bus))
+        .unwrap();
     if let Instruction::ASL(mode, time) = instr {
         let cycles = instruction_func::asl(&mut cpu, &mut bus, mode, *time);
         assert_eq!(bus.read(0x0140), 0x02);
@@ -269,14 +281,15 @@ fn asl_abs_test() {
     }
 }
 
-
 #[test]
 fn bcc_no_branch_test() {
     let (mut cpu, mut bus) = generate_cpu_and_bus();
     cpu.p.c = true;
     bus.write(0, 0x90);
     bus.write(1, 0x20);
-    let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut bus)).unwrap();
+    let instr = INSTRUCTION_TABLE
+        .get(&cpu.read_byte_and_increment(&mut bus))
+        .unwrap();
     if let Instruction::BCC(mode, time) = instr {
         let cycles = instruction_func::bcc(&mut cpu, &mut bus, mode, *time);
         assert_eq!(cycles, 2);
@@ -286,13 +299,14 @@ fn bcc_no_branch_test() {
     }
 }
 
-
 #[test]
 fn bcc_pos_offset_same_page_test() {
     let (mut cpu, mut bus) = generate_cpu_and_bus();
     bus.write(0, 0x90);
     bus.write(1, 0x20);
-    let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut bus)).unwrap();
+    let instr = INSTRUCTION_TABLE
+        .get(&cpu.read_byte_and_increment(&mut bus))
+        .unwrap();
     if let Instruction::BCC(mode, time) = instr {
         let cycles = instruction_func::bcc(&mut cpu, &mut bus, mode, *time);
         assert_eq!(cycles, 3);
@@ -302,14 +316,15 @@ fn bcc_pos_offset_same_page_test() {
     }
 }
 
-
 #[test]
 fn bcc_pos_offset_diff_page_test() {
     let (mut cpu, mut bus) = generate_cpu_and_bus();
     cpu.pc = 0xF0;
     bus.write(0xF0, 0x90);
     bus.write(0xF1, 0x20);
-    let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut bus)).unwrap();
+    let instr = INSTRUCTION_TABLE
+        .get(&cpu.read_byte_and_increment(&mut bus))
+        .unwrap();
     if let Instruction::BCC(mode, time) = instr {
         let cycles = instruction_func::bcc(&mut cpu, &mut bus, mode, *time);
         assert_eq!(cycles, 4);
@@ -319,14 +334,15 @@ fn bcc_pos_offset_diff_page_test() {
     }
 }
 
-
 #[test]
 fn bcc_neg_offset_same_page_test() {
     let (mut cpu, mut bus) = generate_cpu_and_bus();
     cpu.pc = 0x7F01;
     bus.write(0x7F01, 0x90);
     bus.write(0x7F02, 0xFD);
-    let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut bus)).unwrap();
+    let instr = INSTRUCTION_TABLE
+        .get(&cpu.read_byte_and_increment(&mut bus))
+        .unwrap();
     if let Instruction::BCC(mode, time) = instr {
         let cycles = instruction_func::bcc(&mut cpu, &mut bus, mode, *time);
         assert_eq!(cycles, 3);
@@ -336,14 +352,15 @@ fn bcc_neg_offset_same_page_test() {
     }
 }
 
-
 #[test]
 fn bcc_neg_offset_diff_page_test() {
     let (mut cpu, mut bus) = generate_cpu_and_bus();
     cpu.pc = 0x7F00;
     bus.write(0x7F00, 0x90);
     bus.write(0x7F01, 0xFD);
-    let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut bus)).unwrap();
+    let instr = INSTRUCTION_TABLE
+        .get(&cpu.read_byte_and_increment(&mut bus))
+        .unwrap();
     if let Instruction::BCC(mode, time) = instr {
         let cycles = instruction_func::bcc(&mut cpu, &mut bus, mode, *time);
         assert_eq!(cycles, 4);
@@ -353,14 +370,15 @@ fn bcc_neg_offset_diff_page_test() {
     }
 }
 
-
 #[test]
 fn bcs_no_branch_test() {
     let (mut cpu, mut bus) = generate_cpu_and_bus();
     cpu.p.c = false;
     bus.write(0, 0xB0);
     bus.write(1, 0x20);
-    let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut bus)).unwrap();
+    let instr = INSTRUCTION_TABLE
+        .get(&cpu.read_byte_and_increment(&mut bus))
+        .unwrap();
     if let Instruction::BCS(mode, time) = instr {
         let cycles = instruction_func::bcs(&mut cpu, &mut bus, mode, *time);
         assert_eq!(cycles, 2);
@@ -370,14 +388,15 @@ fn bcs_no_branch_test() {
     }
 }
 
-
 #[test]
 fn bcs_pos_offset_same_page_test() {
     let (mut cpu, mut bus) = generate_cpu_and_bus();
     cpu.p.c = true;
     bus.write(0, 0xB0);
     bus.write(1, 0x20);
-    let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut bus)).unwrap();
+    let instr = INSTRUCTION_TABLE
+        .get(&cpu.read_byte_and_increment(&mut bus))
+        .unwrap();
     if let Instruction::BCS(mode, time) = instr {
         let cycles = instruction_func::bcs(&mut cpu, &mut bus, mode, *time);
         assert_eq!(cycles, 3);
@@ -386,7 +405,6 @@ fn bcs_pos_offset_same_page_test() {
         panic!("Wrong instruction, got {:?}", instr);
     }
 }
-
 
 #[test]
 fn bcs_pos_offset_diff_page_test() {
@@ -395,7 +413,9 @@ fn bcs_pos_offset_diff_page_test() {
     cpu.pc = 0xF0;
     bus.write(0xF0, 0xB0);
     bus.write(0xF1, 0x20);
-    let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut bus)).unwrap();
+    let instr = INSTRUCTION_TABLE
+        .get(&cpu.read_byte_and_increment(&mut bus))
+        .unwrap();
     if let Instruction::BCS(mode, time) = instr {
         let cycles = instruction_func::bcs(&mut cpu, &mut bus, mode, *time);
         assert_eq!(cycles, 4);
@@ -404,7 +424,6 @@ fn bcs_pos_offset_diff_page_test() {
         panic!("Wrong instruction, got {:?}", instr);
     }
 }
-
 
 #[test]
 fn bcs_neg_offset_same_page_test() {
@@ -413,7 +432,9 @@ fn bcs_neg_offset_same_page_test() {
     cpu.pc = 0x7F01;
     bus.write(0x7F01, 0xB0);
     bus.write(0x7F02, 0xFD);
-    let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut bus)).unwrap();
+    let instr = INSTRUCTION_TABLE
+        .get(&cpu.read_byte_and_increment(&mut bus))
+        .unwrap();
     if let Instruction::BCS(mode, time) = instr {
         let cycles = instruction_func::bcs(&mut cpu, &mut bus, mode, *time);
         assert_eq!(cycles, 3);
@@ -422,7 +443,6 @@ fn bcs_neg_offset_same_page_test() {
         panic!("Wrong instruction, got {:?}", instr);
     }
 }
-
 
 #[test]
 fn bcs_neg_offset_diff_page_test() {
@@ -431,7 +451,9 @@ fn bcs_neg_offset_diff_page_test() {
     cpu.pc = 0x7F00;
     bus.write(0x7F00, 0xB0);
     bus.write(0x7F01, 0xFD);
-    let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut bus)).unwrap();
+    let instr = INSTRUCTION_TABLE
+        .get(&cpu.read_byte_and_increment(&mut bus))
+        .unwrap();
     if let Instruction::BCS(mode, time) = instr {
         let cycles = instruction_func::bcs(&mut cpu, &mut bus, mode, *time);
         assert_eq!(cycles, 4);
@@ -441,14 +463,15 @@ fn bcs_neg_offset_diff_page_test() {
     }
 }
 
-
 #[test]
 fn beq_no_branch_test() {
     let (mut cpu, mut bus) = generate_cpu_and_bus();
     cpu.p.z = false;
     bus.write(0, 0xF0);
     bus.write(1, 0x20);
-    let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut bus)).unwrap();
+    let instr = INSTRUCTION_TABLE
+        .get(&cpu.read_byte_and_increment(&mut bus))
+        .unwrap();
     if let Instruction::BEQ(mode, time) = instr {
         let cycles = instruction_func::beq(&mut cpu, &mut bus, mode, *time);
         assert_eq!(cycles, 2);
@@ -458,14 +481,15 @@ fn beq_no_branch_test() {
     }
 }
 
-
 #[test]
 fn beq_pos_offset_same_page_test() {
     let (mut cpu, mut bus) = generate_cpu_and_bus();
     cpu.p.z = true;
     bus.write(0, 0xF0);
     bus.write(1, 0x20);
-    let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut bus)).unwrap();
+    let instr = INSTRUCTION_TABLE
+        .get(&cpu.read_byte_and_increment(&mut bus))
+        .unwrap();
     if let Instruction::BEQ(mode, time) = instr {
         let cycles = instruction_func::beq(&mut cpu, &mut bus, mode, *time);
         assert_eq!(cycles, 3);
@@ -474,7 +498,6 @@ fn beq_pos_offset_same_page_test() {
         panic!("Wrong instruction, got {:?}", instr);
     }
 }
-
 
 #[test]
 fn beq_pos_offset_diff_page_test() {
@@ -483,7 +506,9 @@ fn beq_pos_offset_diff_page_test() {
     cpu.pc = 0xF0;
     bus.write(0xF0, 0xF0);
     bus.write(0xF1, 0x20);
-    let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut bus)).unwrap();
+    let instr = INSTRUCTION_TABLE
+        .get(&cpu.read_byte_and_increment(&mut bus))
+        .unwrap();
     if let Instruction::BEQ(mode, time) = instr {
         let cycles = instruction_func::beq(&mut cpu, &mut bus, mode, *time);
         assert_eq!(cycles, 4);
@@ -492,7 +517,6 @@ fn beq_pos_offset_diff_page_test() {
         panic!("Wrong instruction, got {:?}", instr);
     }
 }
-
 
 #[test]
 fn beq_neg_offset_same_page_test() {
@@ -501,7 +525,9 @@ fn beq_neg_offset_same_page_test() {
     cpu.pc = 0x7F01;
     bus.write(0x7F01, 0xF0);
     bus.write(0x7F02, 0xFD);
-    let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut bus)).unwrap();
+    let instr = INSTRUCTION_TABLE
+        .get(&cpu.read_byte_and_increment(&mut bus))
+        .unwrap();
     if let Instruction::BEQ(mode, time) = instr {
         let cycles = instruction_func::beq(&mut cpu, &mut bus, mode, *time);
         assert_eq!(cycles, 3);
@@ -510,7 +536,6 @@ fn beq_neg_offset_same_page_test() {
         panic!("Wrong instruction, got {:?}", instr);
     }
 }
-
 
 #[test]
 fn beq_neg_offset_diff_page_test() {
@@ -519,7 +544,9 @@ fn beq_neg_offset_diff_page_test() {
     cpu.pc = 0x7F00;
     bus.write(0x7F00, 0xF0);
     bus.write(0x7F01, 0xFD);
-    let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut bus)).unwrap();
+    let instr = INSTRUCTION_TABLE
+        .get(&cpu.read_byte_and_increment(&mut bus))
+        .unwrap();
     if let Instruction::BEQ(mode, time) = instr {
         let cycles = instruction_func::beq(&mut cpu, &mut bus, mode, *time);
         assert_eq!(cycles, 4);
@@ -529,14 +556,15 @@ fn beq_neg_offset_diff_page_test() {
     }
 }
 
-
 #[test]
 fn bne_no_branch_test() {
     let (mut cpu, mut bus) = generate_cpu_and_bus();
     cpu.p.z = true;
     bus.write(0, 0xD0);
     bus.write(1, 0x20);
-    let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut bus)).unwrap();
+    let instr = INSTRUCTION_TABLE
+        .get(&cpu.read_byte_and_increment(&mut bus))
+        .unwrap();
     if let Instruction::BNE(mode, time) = instr {
         let cycles = instruction_func::bne(&mut cpu, &mut bus, mode, *time);
         assert_eq!(cycles, 2);
@@ -546,14 +574,15 @@ fn bne_no_branch_test() {
     }
 }
 
-
 #[test]
 fn bne_pos_offset_same_page_test() {
     let (mut cpu, mut bus) = generate_cpu_and_bus();
     cpu.p.z = false;
     bus.write(0, 0xD0);
     bus.write(1, 0x20);
-    let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut bus)).unwrap();
+    let instr = INSTRUCTION_TABLE
+        .get(&cpu.read_byte_and_increment(&mut bus))
+        .unwrap();
     if let Instruction::BNE(mode, time) = instr {
         let cycles = instruction_func::bne(&mut cpu, &mut bus, mode, *time);
         assert_eq!(cycles, 3);
@@ -562,7 +591,6 @@ fn bne_pos_offset_same_page_test() {
         panic!("Wrong instruction, got {:?}", instr);
     }
 }
-
 
 #[test]
 fn bne_pos_offset_diff_page_test() {
@@ -571,7 +599,9 @@ fn bne_pos_offset_diff_page_test() {
     cpu.pc = 0xF0;
     bus.write(0xF0, 0xD0);
     bus.write(0xF1, 0x20);
-    let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut bus)).unwrap();
+    let instr = INSTRUCTION_TABLE
+        .get(&cpu.read_byte_and_increment(&mut bus))
+        .unwrap();
     if let Instruction::BNE(mode, time) = instr {
         let cycles = instruction_func::bne(&mut cpu, &mut bus, mode, *time);
         assert_eq!(cycles, 4);
@@ -580,7 +610,6 @@ fn bne_pos_offset_diff_page_test() {
         panic!("Wrong instruction, got {:?}", instr);
     }
 }
-
 
 #[test]
 fn bne_neg_offset_same_page_test() {
@@ -589,7 +618,9 @@ fn bne_neg_offset_same_page_test() {
     cpu.pc = 0x7F01;
     bus.write(0x7F01, 0xD0);
     bus.write(0x7F02, 0xFD);
-    let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut bus)).unwrap();
+    let instr = INSTRUCTION_TABLE
+        .get(&cpu.read_byte_and_increment(&mut bus))
+        .unwrap();
     if let Instruction::BNE(mode, time) = instr {
         let cycles = instruction_func::bne(&mut cpu, &mut bus, mode, *time);
         assert_eq!(cycles, 3);
@@ -598,7 +629,6 @@ fn bne_neg_offset_same_page_test() {
         panic!("Wrong instruction, got {:?}", instr);
     }
 }
-
 
 #[test]
 fn bne_neg_offset_diff_page_test() {
@@ -607,7 +637,9 @@ fn bne_neg_offset_diff_page_test() {
     cpu.pc = 0x7F00;
     bus.write(0x7F00, 0xD0);
     bus.write(0x7F01, 0xFD);
-    let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut bus)).unwrap();
+    let instr = INSTRUCTION_TABLE
+        .get(&cpu.read_byte_and_increment(&mut bus))
+        .unwrap();
     if let Instruction::BNE(mode, time) = instr {
         let cycles = instruction_func::bne(&mut cpu, &mut bus, mode, *time);
         assert_eq!(cycles, 4);
@@ -617,14 +649,15 @@ fn bne_neg_offset_diff_page_test() {
     }
 }
 
-
 #[test]
 fn bmi_no_branch_test() {
     let (mut cpu, mut bus) = generate_cpu_and_bus();
     cpu.p.n = false;
     bus.write(0, 0x30);
     bus.write(1, 0x20);
-    let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut bus)).unwrap();
+    let instr = INSTRUCTION_TABLE
+        .get(&cpu.read_byte_and_increment(&mut bus))
+        .unwrap();
     if let Instruction::BMI(mode, time) = instr {
         let cycles = instruction_func::bmi(&mut cpu, &mut bus, mode, *time);
         assert_eq!(cycles, 2);
@@ -634,14 +667,15 @@ fn bmi_no_branch_test() {
     }
 }
 
-
 #[test]
 fn bmi_pos_offset_same_page_test() {
     let (mut cpu, mut bus) = generate_cpu_and_bus();
     cpu.p.n = true;
     bus.write(0, 0x30);
     bus.write(1, 0x20);
-    let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut bus)).unwrap();
+    let instr = INSTRUCTION_TABLE
+        .get(&cpu.read_byte_and_increment(&mut bus))
+        .unwrap();
     if let Instruction::BMI(mode, time) = instr {
         let cycles = instruction_func::bmi(&mut cpu, &mut bus, mode, *time);
         assert_eq!(cycles, 3);
@@ -650,7 +684,6 @@ fn bmi_pos_offset_same_page_test() {
         panic!("Wrong instruction, got {:?}", instr);
     }
 }
-
 
 #[test]
 fn bmi_pos_offset_diff_page_test() {
@@ -659,7 +692,9 @@ fn bmi_pos_offset_diff_page_test() {
     cpu.pc = 0xF0;
     bus.write(0xF0, 0x30);
     bus.write(0xF1, 0x20);
-    let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut bus)).unwrap();
+    let instr = INSTRUCTION_TABLE
+        .get(&cpu.read_byte_and_increment(&mut bus))
+        .unwrap();
     if let Instruction::BMI(mode, time) = instr {
         let cycles = instruction_func::bmi(&mut cpu, &mut bus, mode, *time);
         assert_eq!(cycles, 4);
@@ -668,7 +703,6 @@ fn bmi_pos_offset_diff_page_test() {
         panic!("Wrong instruction, got {:?}", instr);
     }
 }
-
 
 #[test]
 fn bmi_neg_offset_same_page_test() {
@@ -677,7 +711,9 @@ fn bmi_neg_offset_same_page_test() {
     cpu.pc = 0x7F01;
     bus.write(0x7F01, 0x30);
     bus.write(0x7F02, 0xFD);
-    let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut bus)).unwrap();
+    let instr = INSTRUCTION_TABLE
+        .get(&cpu.read_byte_and_increment(&mut bus))
+        .unwrap();
     if let Instruction::BMI(mode, time) = instr {
         let cycles = instruction_func::bmi(&mut cpu, &mut bus, mode, *time);
         assert_eq!(cycles, 3);
@@ -686,7 +722,6 @@ fn bmi_neg_offset_same_page_test() {
         panic!("Wrong instruction, got {:?}", instr);
     }
 }
-
 
 #[test]
 fn bmi_neg_offset_diff_page_test() {
@@ -695,7 +730,9 @@ fn bmi_neg_offset_diff_page_test() {
     cpu.pc = 0x7F00;
     bus.write(0x7F00, 0x30);
     bus.write(0x7F01, 0xFD);
-    let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut bus)).unwrap();
+    let instr = INSTRUCTION_TABLE
+        .get(&cpu.read_byte_and_increment(&mut bus))
+        .unwrap();
     if let Instruction::BMI(mode, time) = instr {
         let cycles = instruction_func::bmi(&mut cpu, &mut bus, mode, *time);
         assert_eq!(cycles, 4);
@@ -705,14 +742,15 @@ fn bmi_neg_offset_diff_page_test() {
     }
 }
 
-
 #[test]
 fn bpl_no_branch_test() {
     let (mut cpu, mut bus) = generate_cpu_and_bus();
     cpu.p.n = true;
     bus.write(0, 0x10);
     bus.write(1, 0x20);
-    let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut bus)).unwrap();
+    let instr = INSTRUCTION_TABLE
+        .get(&cpu.read_byte_and_increment(&mut bus))
+        .unwrap();
     if let Instruction::BPL(mode, time) = instr {
         let cycles = instruction_func::bpl(&mut cpu, &mut bus, mode, *time);
         assert_eq!(cycles, 2);
@@ -722,14 +760,15 @@ fn bpl_no_branch_test() {
     }
 }
 
-
 #[test]
 fn bpl_pos_offset_same_page_test() {
     let (mut cpu, mut bus) = generate_cpu_and_bus();
     cpu.p.n = false;
     bus.write(0, 0x10);
     bus.write(1, 0x20);
-    let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut bus)).unwrap();
+    let instr = INSTRUCTION_TABLE
+        .get(&cpu.read_byte_and_increment(&mut bus))
+        .unwrap();
     if let Instruction::BPL(mode, time) = instr {
         let cycles = instruction_func::bpl(&mut cpu, &mut bus, mode, *time);
         assert_eq!(cycles, 3);
@@ -738,7 +777,6 @@ fn bpl_pos_offset_same_page_test() {
         panic!("Wrong instruction, got {:?}", instr);
     }
 }
-
 
 #[test]
 fn bpl_pos_offset_diff_page_test() {
@@ -747,7 +785,9 @@ fn bpl_pos_offset_diff_page_test() {
     cpu.pc = 0xF0;
     bus.write(0xF0, 0x10);
     bus.write(0xF1, 0x20);
-    let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut bus)).unwrap();
+    let instr = INSTRUCTION_TABLE
+        .get(&cpu.read_byte_and_increment(&mut bus))
+        .unwrap();
     if let Instruction::BPL(mode, time) = instr {
         let cycles = instruction_func::bpl(&mut cpu, &mut bus, mode, *time);
         assert_eq!(cycles, 4);
@@ -756,7 +796,6 @@ fn bpl_pos_offset_diff_page_test() {
         panic!("Wrong instruction, got {:?}", instr);
     }
 }
-
 
 #[test]
 fn bpl_neg_offset_same_page_test() {
@@ -765,7 +804,9 @@ fn bpl_neg_offset_same_page_test() {
     cpu.pc = 0x7F01;
     bus.write(0x7F01, 0x10);
     bus.write(0x7F02, 0xFD);
-    let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut bus)).unwrap();
+    let instr = INSTRUCTION_TABLE
+        .get(&cpu.read_byte_and_increment(&mut bus))
+        .unwrap();
     if let Instruction::BPL(mode, time) = instr {
         let cycles = instruction_func::bpl(&mut cpu, &mut bus, mode, *time);
         assert_eq!(cycles, 3);
@@ -774,7 +815,6 @@ fn bpl_neg_offset_same_page_test() {
         panic!("Wrong instruction, got {:?}", instr);
     }
 }
-
 
 #[test]
 fn bpl_neg_offset_diff_page_test() {
@@ -783,7 +823,9 @@ fn bpl_neg_offset_diff_page_test() {
     cpu.pc = 0x7F00;
     bus.write(0x7F00, 0x10);
     bus.write(0x7F01, 0xFD);
-    let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut bus)).unwrap();
+    let instr = INSTRUCTION_TABLE
+        .get(&cpu.read_byte_and_increment(&mut bus))
+        .unwrap();
     if let Instruction::BPL(mode, time) = instr {
         let cycles = instruction_func::bpl(&mut cpu, &mut bus, mode, *time);
         assert_eq!(cycles, 4);
@@ -793,14 +835,15 @@ fn bpl_neg_offset_diff_page_test() {
     }
 }
 
-
 #[test]
 fn bvc_no_branch_test() {
     let (mut cpu, mut bus) = generate_cpu_and_bus();
     cpu.p.v = true;
     bus.write(0, 0x50);
     bus.write(1, 0x20);
-    let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut bus)).unwrap();
+    let instr = INSTRUCTION_TABLE
+        .get(&cpu.read_byte_and_increment(&mut bus))
+        .unwrap();
     if let Instruction::BVC(mode, time) = instr {
         let cycles = instruction_func::bvc(&mut cpu, &mut bus, mode, *time);
         assert_eq!(cycles, 2);
@@ -810,14 +853,15 @@ fn bvc_no_branch_test() {
     }
 }
 
-
 #[test]
 fn bvc_pos_offset_same_page_test() {
     let (mut cpu, mut bus) = generate_cpu_and_bus();
     cpu.p.v = false;
     bus.write(0, 0x50);
     bus.write(1, 0x20);
-    let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut bus)).unwrap();
+    let instr = INSTRUCTION_TABLE
+        .get(&cpu.read_byte_and_increment(&mut bus))
+        .unwrap();
     if let Instruction::BVC(mode, time) = instr {
         let cycles = instruction_func::bvc(&mut cpu, &mut bus, mode, *time);
         assert_eq!(cycles, 3);
@@ -826,7 +870,6 @@ fn bvc_pos_offset_same_page_test() {
         panic!("Wrong instruction, got {:?}", instr);
     }
 }
-
 
 #[test]
 fn bvc_pos_offset_diff_page_test() {
@@ -835,7 +878,9 @@ fn bvc_pos_offset_diff_page_test() {
     cpu.pc = 0xF0;
     bus.write(0xF0, 0x50);
     bus.write(0xF1, 0x20);
-    let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut bus)).unwrap();
+    let instr = INSTRUCTION_TABLE
+        .get(&cpu.read_byte_and_increment(&mut bus))
+        .unwrap();
     if let Instruction::BVC(mode, time) = instr {
         let cycles = instruction_func::bvc(&mut cpu, &mut bus, mode, *time);
         assert_eq!(cycles, 4);
@@ -845,7 +890,6 @@ fn bvc_pos_offset_diff_page_test() {
     }
 }
 
-
 #[test]
 fn bvc_neg_offset_same_page_test() {
     let (mut cpu, mut bus) = generate_cpu_and_bus();
@@ -853,7 +897,9 @@ fn bvc_neg_offset_same_page_test() {
     cpu.pc = 0x7F01;
     bus.write(0x7F01, 0x50);
     bus.write(0x7F02, 0xFD);
-    let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut bus)).unwrap();
+    let instr = INSTRUCTION_TABLE
+        .get(&cpu.read_byte_and_increment(&mut bus))
+        .unwrap();
     if let Instruction::BVC(mode, time) = instr {
         let cycles = instruction_func::bvc(&mut cpu, &mut bus, mode, *time);
         assert_eq!(cycles, 3);
@@ -863,7 +909,6 @@ fn bvc_neg_offset_same_page_test() {
     }
 }
 
-
 #[test]
 fn bvc_neg_offset_diff_page_test() {
     let (mut cpu, mut bus) = generate_cpu_and_bus();
@@ -871,7 +916,9 @@ fn bvc_neg_offset_diff_page_test() {
     cpu.pc = 0x7F00;
     bus.write(0x7F00, 0x50);
     bus.write(0x7F01, 0xFD);
-    let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut bus)).unwrap();
+    let instr = INSTRUCTION_TABLE
+        .get(&cpu.read_byte_and_increment(&mut bus))
+        .unwrap();
     if let Instruction::BVC(mode, time) = instr {
         let cycles = instruction_func::bvc(&mut cpu, &mut bus, mode, *time);
         assert_eq!(cycles, 4);
@@ -881,14 +928,15 @@ fn bvc_neg_offset_diff_page_test() {
     }
 }
 
-
 #[test]
 fn bvs_no_branch_test() {
     let (mut cpu, mut bus) = generate_cpu_and_bus();
     cpu.p.v = false;
     bus.write(0, 0x70);
     bus.write(1, 0x20);
-    let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut bus)).unwrap();
+    let instr = INSTRUCTION_TABLE
+        .get(&cpu.read_byte_and_increment(&mut bus))
+        .unwrap();
     if let Instruction::BVS(mode, time) = instr {
         let cycles = instruction_func::bvs(&mut cpu, &mut bus, mode, *time);
         assert_eq!(cycles, 2);
@@ -898,14 +946,15 @@ fn bvs_no_branch_test() {
     }
 }
 
-
 #[test]
 fn bvs_pos_offset_same_page_test() {
     let (mut cpu, mut bus) = generate_cpu_and_bus();
     cpu.p.v = true;
     bus.write(0, 0x70);
     bus.write(1, 0x20);
-    let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut bus)).unwrap();
+    let instr = INSTRUCTION_TABLE
+        .get(&cpu.read_byte_and_increment(&mut bus))
+        .unwrap();
     if let Instruction::BVS(mode, time) = instr {
         let cycles = instruction_func::bvs(&mut cpu, &mut bus, mode, *time);
         assert_eq!(cycles, 3);
@@ -915,7 +964,6 @@ fn bvs_pos_offset_same_page_test() {
     }
 }
 
-
 #[test]
 fn bvs_pos_offset_diff_page_test() {
     let (mut cpu, mut bus) = generate_cpu_and_bus();
@@ -923,7 +971,9 @@ fn bvs_pos_offset_diff_page_test() {
     cpu.pc = 0xF0;
     bus.write(0xF0, 0x70);
     bus.write(0xF1, 0x20);
-    let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut bus)).unwrap();
+    let instr = INSTRUCTION_TABLE
+        .get(&cpu.read_byte_and_increment(&mut bus))
+        .unwrap();
     if let Instruction::BVS(mode, time) = instr {
         let cycles = instruction_func::bvs(&mut cpu, &mut bus, mode, *time);
         assert_eq!(cycles, 4);
@@ -933,7 +983,6 @@ fn bvs_pos_offset_diff_page_test() {
     }
 }
 
-
 #[test]
 fn bvs_neg_offset_same_page_test() {
     let (mut cpu, mut bus) = generate_cpu_and_bus();
@@ -941,7 +990,9 @@ fn bvs_neg_offset_same_page_test() {
     cpu.pc = 0x7F01;
     bus.write(0x7F01, 0x70);
     bus.write(0x7F02, 0xFD);
-    let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut bus)).unwrap();
+    let instr = INSTRUCTION_TABLE
+        .get(&cpu.read_byte_and_increment(&mut bus))
+        .unwrap();
     if let Instruction::BVS(mode, time) = instr {
         let cycles = instruction_func::bvs(&mut cpu, &mut bus, mode, *time);
         assert_eq!(cycles, 3);
@@ -951,7 +1002,6 @@ fn bvs_neg_offset_same_page_test() {
     }
 }
 
-
 #[test]
 fn bvs_neg_offset_diff_page_test() {
     let (mut cpu, mut bus) = generate_cpu_and_bus();
@@ -959,7 +1009,9 @@ fn bvs_neg_offset_diff_page_test() {
     cpu.pc = 0x7F00;
     bus.write(0x7F00, 0x70);
     bus.write(0x7F01, 0xFD);
-    let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut bus)).unwrap();
+    let instr = INSTRUCTION_TABLE
+        .get(&cpu.read_byte_and_increment(&mut bus))
+        .unwrap();
     if let Instruction::BVS(mode, time) = instr {
         let cycles = instruction_func::bvs(&mut cpu, &mut bus, mode, *time);
         assert_eq!(cycles, 4);
@@ -969,7 +1021,6 @@ fn bvs_neg_offset_diff_page_test() {
     }
 }
 
-
 #[test]
 fn bit_test() {
     let (mut cpu, mut bus) = generate_cpu_and_bus();
@@ -977,7 +1028,9 @@ fn bit_test() {
     bus.write(1, 0x40);
     bus.write(0x0040, 0xE1);
     cpu.a = 2;
-    let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut bus)).unwrap();
+    let instr = INSTRUCTION_TABLE
+        .get(&cpu.read_byte_and_increment(&mut bus))
+        .unwrap();
     if let Instruction::BIT(mode, time) = instr {
         let cycles = instruction_func::bit(&mut cpu, &mut bus, mode, *time);
         assert_eq!(cycles, 3);
@@ -987,10 +1040,7 @@ fn bit_test() {
     } else {
         panic!("Wrong instruction, got {:?}", instr);
     }
-
-
 }
-
 
 #[test]
 fn brk_test() {
@@ -998,7 +1048,9 @@ fn brk_test() {
     cpu.pc = 0x1234; // M[0x1234] = 0 => Break
     cpu.sp = 0xFF;
     cpu.p.n = true;
-    let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut bus)).unwrap();
+    let instr = INSTRUCTION_TABLE
+        .get(&cpu.read_byte_and_increment(&mut bus))
+        .unwrap();
     if let Instruction::BRK(mode, time) = instr {
         let cycles = instruction_func::brk(&mut cpu, &mut bus, mode, *time);
         assert_eq!(cycles, 7);
@@ -1010,10 +1062,7 @@ fn brk_test() {
     } else {
         panic!("Wrong instruction, got {:?}", instr);
     }
-    
-    
 }
-
 
 #[test]
 fn cmp_imm_test() {
@@ -1021,7 +1070,9 @@ fn cmp_imm_test() {
     bus.write(0, 0xC9);
     bus.write(1, 0x02);
     cpu.a = 0x03;
-    let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut bus)).unwrap();
+    let instr = INSTRUCTION_TABLE
+        .get(&cpu.read_byte_and_increment(&mut bus))
+        .unwrap();
     if let Instruction::CMP(mode, time) = instr {
         let cycles = instruction_func::cmp(&mut cpu, &mut bus, mode, *time);
         assert_eq!(cycles, 2);
@@ -1032,7 +1083,6 @@ fn cmp_imm_test() {
         panic!("Wrong instruction, got {:?}", instr);
     }
 }
-
 
 #[test]
 fn cmp_imm_carry_test() {
@@ -1040,7 +1090,9 @@ fn cmp_imm_carry_test() {
     bus.write(0, 0xC9);
     bus.write(1, 0x03);
     cpu.a = 0x04;
-    let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut bus)).unwrap();
+    let instr = INSTRUCTION_TABLE
+        .get(&cpu.read_byte_and_increment(&mut bus))
+        .unwrap();
     if let Instruction::CMP(mode, time) = instr {
         let cycles = instruction_func::cmp(&mut cpu, &mut bus, mode, *time);
         assert_eq!(cycles, 2);
@@ -1051,7 +1103,6 @@ fn cmp_imm_carry_test() {
         panic!("Wrong instruction, got {:?}", instr);
     }
 }
-
 
 #[test]
 fn cmp_imm_zero_test() {
@@ -1059,7 +1110,9 @@ fn cmp_imm_zero_test() {
     bus.write(0, 0xC9);
     bus.write(1, 0x03);
     cpu.a = 0x03;
-    let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut bus)).unwrap();
+    let instr = INSTRUCTION_TABLE
+        .get(&cpu.read_byte_and_increment(&mut bus))
+        .unwrap();
     if let Instruction::CMP(mode, time) = instr {
         let cycles = instruction_func::cmp(&mut cpu, &mut bus, mode, *time);
         assert_eq!(cycles, 2);
@@ -1070,7 +1123,6 @@ fn cmp_imm_zero_test() {
         panic!("Wrong instruction, got {:?}", instr);
     }
 }
-
 
 #[test]
 fn cmp_imm_neg_test() {
@@ -1078,7 +1130,9 @@ fn cmp_imm_neg_test() {
     bus.write(0, 0xC9);
     bus.write(1, 0x03);
     cpu.a = 0x02;
-    let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut bus)).unwrap();
+    let instr = INSTRUCTION_TABLE
+        .get(&cpu.read_byte_and_increment(&mut bus))
+        .unwrap();
     if let Instruction::CMP(mode, time) = instr {
         let cycles = instruction_func::cmp(&mut cpu, &mut bus, mode, *time);
         assert_eq!(cycles, 2);
@@ -1090,14 +1144,15 @@ fn cmp_imm_neg_test() {
     }
 }
 
-
 #[test]
 fn cpx_imm_test() {
     let (mut cpu, mut bus) = generate_cpu_and_bus();
     bus.write(0, 0xE0);
     bus.write(1, 0x02);
     cpu.x = 0x03;
-    let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut bus)).unwrap();
+    let instr = INSTRUCTION_TABLE
+        .get(&cpu.read_byte_and_increment(&mut bus))
+        .unwrap();
     if let Instruction::CPX(mode, time) = instr {
         let cycles = instruction_func::cpx(&mut cpu, &mut bus, mode, *time);
         assert_eq!(cycles, 2);
@@ -1108,7 +1163,6 @@ fn cpx_imm_test() {
         panic!("Wrong instruction, got {:?}", instr);
     }
 }
-
 
 #[test]
 fn cpx_imm_carry_test() {
@@ -1116,7 +1170,9 @@ fn cpx_imm_carry_test() {
     bus.write(0, 0xE0);
     bus.write(1, 0x03);
     cpu.x = 0x04;
-    let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut bus)).unwrap();
+    let instr = INSTRUCTION_TABLE
+        .get(&cpu.read_byte_and_increment(&mut bus))
+        .unwrap();
     if let Instruction::CPX(mode, time) = instr {
         let cycles = instruction_func::cpx(&mut cpu, &mut bus, mode, *time);
         assert_eq!(cycles, 2);
@@ -1127,7 +1183,6 @@ fn cpx_imm_carry_test() {
         panic!("Wrong instruction, got {:?}", instr);
     }
 }
-
 
 #[test]
 fn cpx_imm_zero_test() {
@@ -1135,7 +1190,9 @@ fn cpx_imm_zero_test() {
     bus.write(0, 0xE0);
     bus.write(1, 0x03);
     cpu.x = 0x03;
-    let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut bus)).unwrap();
+    let instr = INSTRUCTION_TABLE
+        .get(&cpu.read_byte_and_increment(&mut bus))
+        .unwrap();
     if let Instruction::CPX(mode, time) = instr {
         let cycles = instruction_func::cpx(&mut cpu, &mut bus, mode, *time);
         assert_eq!(cycles, 2);
@@ -1146,7 +1203,6 @@ fn cpx_imm_zero_test() {
         panic!("Wrong instruction, got {:?}", instr);
     }
 }
-
 
 #[test]
 fn cpx_imm_neg_test() {
@@ -1154,7 +1210,9 @@ fn cpx_imm_neg_test() {
     bus.write(0, 0xE0);
     bus.write(1, 0x03);
     cpu.x = 0x02;
-    let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut bus)).unwrap();
+    let instr = INSTRUCTION_TABLE
+        .get(&cpu.read_byte_and_increment(&mut bus))
+        .unwrap();
     if let Instruction::CPX(mode, time) = instr {
         let cycles = instruction_func::cpx(&mut cpu, &mut bus, mode, *time);
         assert_eq!(cycles, 2);
@@ -1166,14 +1224,15 @@ fn cpx_imm_neg_test() {
     }
 }
 
-
 #[test]
 fn cpy_imm_test() {
     let (mut cpu, mut bus) = generate_cpu_and_bus();
     bus.write(0, 0xC0);
     bus.write(1, 0x02);
     cpu.y = 0x03;
-    let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut bus)).unwrap();
+    let instr = INSTRUCTION_TABLE
+        .get(&cpu.read_byte_and_increment(&mut bus))
+        .unwrap();
     if let Instruction::CPY(mode, time) = instr {
         let cycles = instruction_func::cpy(&mut cpu, &mut bus, mode, *time);
         assert_eq!(cycles, 2);
@@ -1184,7 +1243,6 @@ fn cpy_imm_test() {
         panic!("Wrong instruction, got {:?}", instr);
     }
 }
-
 
 #[test]
 fn cpy_imm_carry_test() {
@@ -1192,7 +1250,9 @@ fn cpy_imm_carry_test() {
     bus.write(0, 0xC0);
     bus.write(1, 0x03);
     cpu.y = 0x04;
-    let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut bus)).unwrap();
+    let instr = INSTRUCTION_TABLE
+        .get(&cpu.read_byte_and_increment(&mut bus))
+        .unwrap();
     if let Instruction::CPY(mode, time) = instr {
         let cycles = instruction_func::cpy(&mut cpu, &mut bus, mode, *time);
         assert_eq!(cycles, 2);
@@ -1204,14 +1264,15 @@ fn cpy_imm_carry_test() {
     }
 }
 
-
 #[test]
 fn cpy_imm_zero_test() {
     let (mut cpu, mut bus) = generate_cpu_and_bus();
     bus.write(0, 0xC0);
     bus.write(1, 0x03);
     cpu.y = 0x03;
-    let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut bus)).unwrap();
+    let instr = INSTRUCTION_TABLE
+        .get(&cpu.read_byte_and_increment(&mut bus))
+        .unwrap();
     if let Instruction::CPY(mode, time) = instr {
         let cycles = instruction_func::cpy(&mut cpu, &mut bus, mode, *time);
         assert_eq!(cycles, 2);
@@ -1223,14 +1284,15 @@ fn cpy_imm_zero_test() {
     }
 }
 
-
 #[test]
 fn cpy_imm_neg_test() {
     let (mut cpu, mut bus) = generate_cpu_and_bus();
     bus.write(0, 0xC0);
     bus.write(1, 0x03);
     cpu.y = 0x02;
-    let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut bus)).unwrap();
+    let instr = INSTRUCTION_TABLE
+        .get(&cpu.read_byte_and_increment(&mut bus))
+        .unwrap();
     if let Instruction::CPY(mode, time) = instr {
         let cycles = instruction_func::cpy(&mut cpu, &mut bus, mode, *time);
         assert_eq!(cycles, 2);
@@ -1242,14 +1304,15 @@ fn cpy_imm_neg_test() {
     }
 }
 
-
 #[test]
 fn dec_zp_test() {
     let (mut cpu, mut bus) = generate_cpu_and_bus();
     bus.write(0x00FF, 2);
     bus.write(0, 0xC6);
     bus.write(1, 0xFF);
-    let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut bus)).unwrap();
+    let instr = INSTRUCTION_TABLE
+        .get(&cpu.read_byte_and_increment(&mut bus))
+        .unwrap();
     if let Instruction::DEC(mode, time) = instr {
         let cycles = instruction_func::dec(&mut cpu, &mut bus, mode, *time);
         assert_eq!(bus.read(0x00FF), 1);
@@ -1261,14 +1324,15 @@ fn dec_zp_test() {
     }
 }
 
-
 #[test]
 fn dec_zp_zero_test() {
     let (mut cpu, mut bus) = generate_cpu_and_bus();
     bus.write(0x00FF, 1);
     bus.write(0, 0xC6);
     bus.write(1, 0xFF);
-    let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut bus)).unwrap();
+    let instr = INSTRUCTION_TABLE
+        .get(&cpu.read_byte_and_increment(&mut bus))
+        .unwrap();
     if let Instruction::DEC(mode, time) = instr {
         let cycles = instruction_func::dec(&mut cpu, &mut bus, mode, *time);
         assert_eq!(bus.read(0x00FF), 0);
@@ -1280,14 +1344,15 @@ fn dec_zp_zero_test() {
     }
 }
 
-
 #[test]
 fn dec_zp_neg_test() {
     let (mut cpu, mut bus) = generate_cpu_and_bus();
     bus.write(0x00FF, 0x81);
     bus.write(0, 0xC6);
     bus.write(1, 0xFF);
-    let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut bus)).unwrap();
+    let instr = INSTRUCTION_TABLE
+        .get(&cpu.read_byte_and_increment(&mut bus))
+        .unwrap();
     if let Instruction::DEC(mode, time) = instr {
         let cycles = instruction_func::dec(&mut cpu, &mut bus, mode, *time);
         assert_eq!(bus.read(0x00FF), 0x80);
@@ -1299,13 +1364,14 @@ fn dec_zp_neg_test() {
     }
 }
 
-
 #[test]
 fn dex_zp_test() {
     let (mut cpu, mut bus) = generate_cpu_and_bus();
     bus.write(0, 0xCA);
     cpu.x = 2;
-    let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut bus)).unwrap();
+    let instr = INSTRUCTION_TABLE
+        .get(&cpu.read_byte_and_increment(&mut bus))
+        .unwrap();
     if let Instruction::DEX(mode, time) = instr {
         let cycles = instruction_func::dex(&mut cpu, &mut bus, mode, *time);
         assert_eq!(cpu.x, 1);
@@ -1317,13 +1383,14 @@ fn dex_zp_test() {
     }
 }
 
-
 #[test]
 fn dex_zp_zero_test() {
     let (mut cpu, mut bus) = generate_cpu_and_bus();
     bus.write(0, 0xCA);
     cpu.x = 0x01;
-    let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut bus)).unwrap();
+    let instr = INSTRUCTION_TABLE
+        .get(&cpu.read_byte_and_increment(&mut bus))
+        .unwrap();
     if let Instruction::DEX(mode, time) = instr {
         let cycles = instruction_func::dex(&mut cpu, &mut bus, mode, *time);
         assert_eq!(cpu.x, 0);
@@ -1335,13 +1402,14 @@ fn dex_zp_zero_test() {
     }
 }
 
-
 #[test]
 fn dex_zp_neg_test() {
     let (mut cpu, mut bus) = generate_cpu_and_bus();
     bus.write(0, 0xCA);
     cpu.x = 0x81;
-    let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut bus)).unwrap();
+    let instr = INSTRUCTION_TABLE
+        .get(&cpu.read_byte_and_increment(&mut bus))
+        .unwrap();
     if let Instruction::DEX(mode, time) = instr {
         let cycles = instruction_func::dex(&mut cpu, &mut bus, mode, *time);
         assert_eq!(cpu.x, 0x80);
@@ -1353,13 +1421,14 @@ fn dex_zp_neg_test() {
     }
 }
 
-
 #[test]
 fn dey_zp_test() {
     let (mut cpu, mut bus) = generate_cpu_and_bus();
     bus.write(0, 0x88);
     cpu.y = 2;
-    let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut bus)).unwrap();
+    let instr = INSTRUCTION_TABLE
+        .get(&cpu.read_byte_and_increment(&mut bus))
+        .unwrap();
     if let Instruction::DEY(mode, time) = instr {
         let cycles = instruction_func::dey(&mut cpu, &mut bus, mode, *time);
         assert_eq!(cpu.y, 1);
@@ -1371,13 +1440,14 @@ fn dey_zp_test() {
     }
 }
 
-
 #[test]
 fn dey_zp_zero_test() {
     let (mut cpu, mut bus) = generate_cpu_and_bus();
     bus.write(0, 0x88);
     cpu.y = 0x01;
-    let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut bus)).unwrap();
+    let instr = INSTRUCTION_TABLE
+        .get(&cpu.read_byte_and_increment(&mut bus))
+        .unwrap();
     if let Instruction::DEY(mode, time) = instr {
         let cycles = instruction_func::dey(&mut cpu, &mut bus, mode, *time);
         assert_eq!(cpu.y, 0);
@@ -1389,13 +1459,14 @@ fn dey_zp_zero_test() {
     }
 }
 
-
 #[test]
 fn dey_zp_neg_test() {
     let (mut cpu, mut bus) = generate_cpu_and_bus();
     bus.write(0, 0x88);
     cpu.y = 0x81;
-    let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut bus)).unwrap();
+    let instr = INSTRUCTION_TABLE
+        .get(&cpu.read_byte_and_increment(&mut bus))
+        .unwrap();
     if let Instruction::DEY(mode, time) = instr {
         let cycles = instruction_func::dey(&mut cpu, &mut bus, mode, *time);
         assert_eq!(cpu.y, 0x80);
@@ -1407,14 +1478,15 @@ fn dey_zp_neg_test() {
     }
 }
 
-
 #[test]
 fn eor_imm_test() {
     let (mut cpu, mut bus) = generate_cpu_and_bus();
     bus.write(0, 0x49);
     bus.write(1, 0xF0);
     cpu.a = 0x8F;
-    let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut bus)).unwrap();
+    let instr = INSTRUCTION_TABLE
+        .get(&cpu.read_byte_and_increment(&mut bus))
+        .unwrap();
     if let Instruction::EOR(mode, time) = instr {
         let cycles = instruction_func::eor(&mut cpu, &mut bus, mode, *time);
         assert_eq!(cpu.a, 0x7F);
@@ -1426,14 +1498,15 @@ fn eor_imm_test() {
     }
 }
 
-
 #[test]
 fn eor_imm_zero_test() {
     let (mut cpu, mut bus) = generate_cpu_and_bus();
     bus.write(0, 0x49);
     bus.write(1, 0xFF);
     cpu.a = 0xFF;
-    let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut bus)).unwrap();
+    let instr = INSTRUCTION_TABLE
+        .get(&cpu.read_byte_and_increment(&mut bus))
+        .unwrap();
     if let Instruction::EOR(mode, time) = instr {
         let cycles = instruction_func::eor(&mut cpu, &mut bus, mode, *time);
         assert_eq!(cpu.a, 0x00);
@@ -1445,14 +1518,15 @@ fn eor_imm_zero_test() {
     }
 }
 
-
 #[test]
 fn eor_imm_neg_test() {
     let (mut cpu, mut bus) = generate_cpu_and_bus();
     bus.write(0, 0x49);
     bus.write(1, 0xF0);
     cpu.a = 0x0F;
-    let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut bus)).unwrap();
+    let instr = INSTRUCTION_TABLE
+        .get(&cpu.read_byte_and_increment(&mut bus))
+        .unwrap();
     if let Instruction::EOR(mode, time) = instr {
         let cycles = instruction_func::eor(&mut cpu, &mut bus, mode, *time);
         assert_eq!(cpu.a, 0xFF);
@@ -1464,15 +1538,15 @@ fn eor_imm_neg_test() {
     }
 }
 
-
-
 #[test]
 fn inc_zp_test() {
     let (mut cpu, mut bus) = generate_cpu_and_bus();
     bus.write(0x00FF, 1);
     bus.write(0, 0xE6);
     bus.write(1, 0xFF);
-    let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut bus)).unwrap();
+    let instr = INSTRUCTION_TABLE
+        .get(&cpu.read_byte_and_increment(&mut bus))
+        .unwrap();
     if let Instruction::INC(mode, time) = instr {
         let cycles = instruction_func::inc(&mut cpu, &mut bus, mode, *time);
         assert_eq!(bus.read(0x00FF), 2);
@@ -1484,14 +1558,15 @@ fn inc_zp_test() {
     }
 }
 
-
 #[test]
 fn inc_zp_zero_test() {
     let (mut cpu, mut bus) = generate_cpu_and_bus();
     bus.write(0x00FF, 0xFF);
     bus.write(0, 0xE6);
     bus.write(1, 0xFF);
-    let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut bus)).unwrap();
+    let instr = INSTRUCTION_TABLE
+        .get(&cpu.read_byte_and_increment(&mut bus))
+        .unwrap();
     if let Instruction::INC(mode, time) = instr {
         let cycles = instruction_func::inc(&mut cpu, &mut bus, mode, *time);
         assert_eq!(bus.read(0x00FF), 0);
@@ -1503,14 +1578,15 @@ fn inc_zp_zero_test() {
     }
 }
 
-
 #[test]
 fn inc_zp_neg_test() {
     let (mut cpu, mut bus) = generate_cpu_and_bus();
     bus.write(0x00FF, 0x7F);
     bus.write(0, 0xE6);
     bus.write(1, 0xFF);
-    let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut bus)).unwrap();
+    let instr = INSTRUCTION_TABLE
+        .get(&cpu.read_byte_and_increment(&mut bus))
+        .unwrap();
     if let Instruction::INC(mode, time) = instr {
         let cycles = instruction_func::inc(&mut cpu, &mut bus, mode, *time);
         assert_eq!(bus.read(0x00FF), 0x80);
@@ -1522,13 +1598,14 @@ fn inc_zp_neg_test() {
     }
 }
 
-
 #[test]
 fn inx_zp_test() {
     let (mut cpu, mut bus) = generate_cpu_and_bus();
     bus.write(0, 0xE8);
     cpu.x = 1;
-    let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut bus)).unwrap();
+    let instr = INSTRUCTION_TABLE
+        .get(&cpu.read_byte_and_increment(&mut bus))
+        .unwrap();
     if let Instruction::INX(mode, time) = instr {
         let cycles = instruction_func::inx(&mut cpu, &mut bus, mode, *time);
         assert_eq!(cpu.x, 2);
@@ -1540,13 +1617,14 @@ fn inx_zp_test() {
     }
 }
 
-
 #[test]
 fn inx_zp_zero_test() {
     let (mut cpu, mut bus) = generate_cpu_and_bus();
     bus.write(0, 0xE8);
     cpu.x = 0xFF;
-    let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut bus)).unwrap();
+    let instr = INSTRUCTION_TABLE
+        .get(&cpu.read_byte_and_increment(&mut bus))
+        .unwrap();
     if let Instruction::INX(mode, time) = instr {
         let cycles = instruction_func::inx(&mut cpu, &mut bus, mode, *time);
         assert_eq!(cpu.x, 0);
@@ -1558,13 +1636,14 @@ fn inx_zp_zero_test() {
     }
 }
 
-
 #[test]
 fn inx_zp_neg_test() {
     let (mut cpu, mut bus) = generate_cpu_and_bus();
     bus.write(0, 0xE8);
     cpu.x = 0x7F;
-    let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut bus)).unwrap();
+    let instr = INSTRUCTION_TABLE
+        .get(&cpu.read_byte_and_increment(&mut bus))
+        .unwrap();
     if let Instruction::INX(mode, time) = instr {
         let cycles = instruction_func::inx(&mut cpu, &mut bus, mode, *time);
         assert_eq!(cpu.x, 0x80);
@@ -1576,13 +1655,14 @@ fn inx_zp_neg_test() {
     }
 }
 
-
 #[test]
 fn iny_zp_test() {
     let (mut cpu, mut bus) = generate_cpu_and_bus();
     bus.write(0, 0xC8);
     cpu.y = 1;
-    let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut bus)).unwrap();
+    let instr = INSTRUCTION_TABLE
+        .get(&cpu.read_byte_and_increment(&mut bus))
+        .unwrap();
     if let Instruction::INY(mode, time) = instr {
         let cycles = instruction_func::iny(&mut cpu, &mut bus, mode, *time);
         assert_eq!(cpu.y, 2);
@@ -1594,14 +1674,15 @@ fn iny_zp_test() {
     }
 }
 
-
 #[test]
 fn jmp_abs_test() {
     let (mut cpu, mut bus) = generate_cpu_and_bus();
     bus.write(0, 0x4C);
     bus.write(1, 0x40);
     bus.write(2, 0x01);
-    let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut bus)).unwrap();
+    let instr = INSTRUCTION_TABLE
+        .get(&cpu.read_byte_and_increment(&mut bus))
+        .unwrap();
     if let Instruction::JMP(mode, time) = instr {
         let cycles = instruction_func::jmp(&mut cpu, &mut bus, mode, *time);
         assert_eq!(cpu.pc, 0x0140);
@@ -1611,7 +1692,6 @@ fn jmp_abs_test() {
     }
 }
 
-
 #[test]
 fn jmp_ind_test() {
     let (mut cpu, mut bus) = generate_cpu_and_bus();
@@ -1620,7 +1700,9 @@ fn jmp_ind_test() {
     bus.write(0, 0x6C);
     bus.write(1, 0xFE);
     bus.write(2, 0x03);
-    let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut bus)).unwrap();
+    let instr = INSTRUCTION_TABLE
+        .get(&cpu.read_byte_and_increment(&mut bus))
+        .unwrap();
     if let Instruction::JMP(mode, time) = instr {
         let cycles = instruction_func::jmp(&mut cpu, &mut bus, mode, *time);
         assert_eq!(cpu.pc, 0x0140);
@@ -1630,13 +1712,14 @@ fn jmp_ind_test() {
     }
 }
 
-
 #[test]
 fn iny_zp_zero_test() {
     let (mut cpu, mut bus) = generate_cpu_and_bus();
     bus.write(0, 0xC8);
     cpu.y = 0xFF;
-    let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut bus)).unwrap();
+    let instr = INSTRUCTION_TABLE
+        .get(&cpu.read_byte_and_increment(&mut bus))
+        .unwrap();
     if let Instruction::INY(mode, time) = instr {
         let cycles = instruction_func::iny(&mut cpu, &mut bus, mode, *time);
         assert_eq!(cpu.y, 0);
@@ -1648,13 +1731,14 @@ fn iny_zp_zero_test() {
     }
 }
 
-
 #[test]
 fn iny_zp_neg_test() {
     let (mut cpu, mut bus) = generate_cpu_and_bus();
     bus.write(0, 0xC8);
     cpu.y = 0x7F;
-    let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut bus)).unwrap();
+    let instr = INSTRUCTION_TABLE
+        .get(&cpu.read_byte_and_increment(&mut bus))
+        .unwrap();
     if let Instruction::INY(mode, time) = instr {
         let cycles = instruction_func::iny(&mut cpu, &mut bus, mode, *time);
         assert_eq!(cpu.y, 0x80);
@@ -1666,17 +1750,17 @@ fn iny_zp_neg_test() {
     }
 }
 
-
 #[test]
 fn jsr_test() {
-    
     let (mut cpu, mut bus) = generate_cpu_and_bus();
     bus.write(0x0240, 0x20);
     bus.write(0x0241, 0x40);
     bus.write(0x0242, 0x01);
     cpu.pc = 0x0240;
     cpu.sp = 0xFF;
-    let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut bus)).unwrap();
+    let instr = INSTRUCTION_TABLE
+        .get(&cpu.read_byte_and_increment(&mut bus))
+        .unwrap();
     if let Instruction::JSR(mode, time) = instr {
         let cycles = instruction_func::jsr(&mut cpu, &mut bus, mode, *time);
         assert_eq!(cpu.pc, 0x0140);
@@ -1688,13 +1772,14 @@ fn jsr_test() {
     }
 }
 
-
 #[test]
 fn ldx_imm_test() {
     let (mut cpu, mut bus) = generate_cpu_and_bus();
     bus.write(0, 0xA2);
     bus.write(1, 0x44);
-    let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut bus)).unwrap();
+    let instr = INSTRUCTION_TABLE
+        .get(&cpu.read_byte_and_increment(&mut bus))
+        .unwrap();
     if let Instruction::LDX(mode, time) = instr {
         let cycles = instruction_func::ldx(&mut cpu, &mut bus, mode, *time);
         assert_eq!(cpu.x, 0x44);
@@ -1706,14 +1791,15 @@ fn ldx_imm_test() {
     }
 }
 
-
 #[test]
 fn ldx_zp_test() {
     let (mut cpu, mut bus) = generate_cpu_and_bus();
-    bus.write(0x0040, 0x44);  // M[0x0040] <- 0x4
+    bus.write(0x0040, 0x44); // M[0x0040] <- 0x4
     bus.write(0, 0xA6);
     bus.write(1, 0x40);
-    let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut bus)).unwrap();
+    let instr = INSTRUCTION_TABLE
+        .get(&cpu.read_byte_and_increment(&mut bus))
+        .unwrap();
     if let Instruction::LDX(mode, time) = instr {
         let cycles = instruction_func::ldx(&mut cpu, &mut bus, mode, *time);
         assert_eq!(cpu.x, 0x44);
@@ -1725,15 +1811,16 @@ fn ldx_zp_test() {
     }
 }
 
-
 #[test]
 fn ldx_zpy_test() {
     let (mut cpu, mut bus) = generate_cpu_and_bus();
-    bus.write(0x0040, 0x44);  // M[0x0040] <- 0x4
+    bus.write(0x0040, 0x44); // M[0x0040] <- 0x4
     bus.write(0, 0xB6);
     bus.write(1, 0x3F);
     cpu.y = 1;
-    let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut bus)).unwrap();
+    let instr = INSTRUCTION_TABLE
+        .get(&cpu.read_byte_and_increment(&mut bus))
+        .unwrap();
     if let Instruction::LDX(mode, time) = instr {
         let cycles = instruction_func::ldx(&mut cpu, &mut bus, mode, *time);
         assert_eq!(cpu.x, 0x44);
@@ -1744,7 +1831,6 @@ fn ldx_zpy_test() {
         panic!("Wrong instruction, got {:?}", instr);
     }
 }
-
 
 #[test]
 fn ldx_abs_test() {
@@ -1753,7 +1839,9 @@ fn ldx_abs_test() {
     bus.write(0, 0xAE);
     bus.write(1, 0x40);
     bus.write(2, 0x01);
-    let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut bus)).unwrap();
+    let instr = INSTRUCTION_TABLE
+        .get(&cpu.read_byte_and_increment(&mut bus))
+        .unwrap();
     if let Instruction::LDX(mode, time) = instr {
         let cycles = instruction_func::ldx(&mut cpu, &mut bus, mode, *time);
         assert_eq!(cpu.x, 0x44);
@@ -1764,7 +1852,6 @@ fn ldx_abs_test() {
         panic!("Wrong instruction, got {:?}", instr);
     }
 }
-
 
 #[test]
 fn ldx_absy_test_same_page() {
@@ -1774,7 +1861,9 @@ fn ldx_absy_test_same_page() {
     bus.write(1, 0x3F);
     bus.write(2, 0x01);
     cpu.y = 0x01;
-    let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut bus)).unwrap();
+    let instr = INSTRUCTION_TABLE
+        .get(&cpu.read_byte_and_increment(&mut bus))
+        .unwrap();
     if let Instruction::LDX(mode, time) = instr {
         let cycles = instruction_func::ldx(&mut cpu, &mut bus, mode, *time);
         assert_eq!(cpu.x, 0x44);
@@ -1785,7 +1874,6 @@ fn ldx_absy_test_same_page() {
         panic!("Wrong instruction, got {:?}", instr);
     }
 }
-
 
 #[test]
 fn ldx_absy_test_diff_page() {
@@ -1795,7 +1883,9 @@ fn ldx_absy_test_diff_page() {
     bus.write(1, 0xC1);
     bus.write(2, 0x00);
     cpu.y = 0x7F;
-    let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut bus)).unwrap();
+    let instr = INSTRUCTION_TABLE
+        .get(&cpu.read_byte_and_increment(&mut bus))
+        .unwrap();
     if let Instruction::LDX(mode, time) = instr {
         let cycles = instruction_func::ldx(&mut cpu, &mut bus, mode, *time);
         assert_eq!(cpu.x, 0x44);
@@ -1807,13 +1897,14 @@ fn ldx_absy_test_diff_page() {
     }
 }
 
-
 #[test]
 fn ldy_imm_test() {
     let (mut cpu, mut bus) = generate_cpu_and_bus();
     bus.write(0, 0xA0);
     bus.write(1, 0x44);
-    let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut bus)).unwrap();
+    let instr = INSTRUCTION_TABLE
+        .get(&cpu.read_byte_and_increment(&mut bus))
+        .unwrap();
     if let Instruction::LDY(mode, time) = instr {
         let cycles = instruction_func::ldy(&mut cpu, &mut bus, mode, *time);
         assert_eq!(cpu.y, 0x44);
@@ -1825,14 +1916,15 @@ fn ldy_imm_test() {
     }
 }
 
-
 #[test]
 fn ldy_zp_test() {
     let (mut cpu, mut bus) = generate_cpu_and_bus();
-    bus.write(0x0040, 0x44);  // M[0x0040] <- 0x4
+    bus.write(0x0040, 0x44); // M[0x0040] <- 0x4
     bus.write(0, 0xA4);
     bus.write(1, 0x40);
-    let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut bus)).unwrap();
+    let instr = INSTRUCTION_TABLE
+        .get(&cpu.read_byte_and_increment(&mut bus))
+        .unwrap();
     if let Instruction::LDY(mode, time) = instr {
         let cycles = instruction_func::ldy(&mut cpu, &mut bus, mode, *time);
         assert_eq!(cpu.y, 0x44);
@@ -1844,15 +1936,16 @@ fn ldy_zp_test() {
     }
 }
 
-
 #[test]
 fn ldy_zpx_test() {
     let (mut cpu, mut bus) = generate_cpu_and_bus();
-    bus.write(0x0040, 0x44);  // M[0x0040] <- 0x4;
+    bus.write(0x0040, 0x44); // M[0x0040] <- 0x4;
     bus.write(0, 0xB4);
     bus.write(1, 0x3F);
     cpu.x = 1;
-    let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut bus)).unwrap();
+    let instr = INSTRUCTION_TABLE
+        .get(&cpu.read_byte_and_increment(&mut bus))
+        .unwrap();
     if let Instruction::LDY(mode, time) = instr {
         let cycles = instruction_func::ldy(&mut cpu, &mut bus, mode, *time);
         assert_eq!(cpu.y, 0x44);
@@ -1863,7 +1956,6 @@ fn ldy_zpx_test() {
         panic!("Wrong instruction, got {:?}", instr);
     }
 }
-
 
 #[test]
 fn ldy_abs_test() {
@@ -1872,7 +1964,9 @@ fn ldy_abs_test() {
     bus.write(0, 0xAC);
     bus.write(1, 0x40);
     bus.write(2, 0x01);
-    let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut bus)).unwrap();
+    let instr = INSTRUCTION_TABLE
+        .get(&cpu.read_byte_and_increment(&mut bus))
+        .unwrap();
     if let Instruction::LDY(mode, time) = instr {
         let cycles = instruction_func::ldy(&mut cpu, &mut bus, mode, *time);
         assert_eq!(cpu.y, 0x44);
@@ -1883,7 +1977,6 @@ fn ldy_abs_test() {
         panic!("Wrong instruction, got {:?}", instr);
     }
 }
-
 
 #[test]
 fn ldy_absx_test_same_page() {
@@ -1893,7 +1986,9 @@ fn ldy_absx_test_same_page() {
     bus.write(1, 0x3F);
     bus.write(2, 0x01);
     cpu.x = 0x01;
-    let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut bus)).unwrap();
+    let instr = INSTRUCTION_TABLE
+        .get(&cpu.read_byte_and_increment(&mut bus))
+        .unwrap();
     if let Instruction::LDY(mode, time) = instr {
         let cycles = instruction_func::ldy(&mut cpu, &mut bus, mode, *time);
         assert_eq!(cpu.y, 0x44);
@@ -1905,7 +2000,6 @@ fn ldy_absx_test_same_page() {
     }
 }
 
-
 #[test]
 fn ldy_absx_test_diff_page() {
     let (mut cpu, mut bus) = generate_cpu_and_bus();
@@ -1914,7 +2008,9 @@ fn ldy_absx_test_diff_page() {
     bus.write(1, 0xC1);
     bus.write(2, 0x00);
     cpu.x = 0x7F;
-    let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut bus)).unwrap();
+    let instr = INSTRUCTION_TABLE
+        .get(&cpu.read_byte_and_increment(&mut bus))
+        .unwrap();
     if let Instruction::LDY(mode, time) = instr {
         let cycles = instruction_func::ldy(&mut cpu, &mut bus, mode, *time);
         assert_eq!(cpu.y, 0x44);
@@ -1926,13 +2022,14 @@ fn ldy_absx_test_diff_page() {
     }
 }
 
-
 #[test]
 fn lda_imm_test() {
     let (mut cpu, mut bus) = generate_cpu_and_bus();
     bus.write(0, 0xA9);
     bus.write(1, 0x44);
-    let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut bus)).unwrap();
+    let instr = INSTRUCTION_TABLE
+        .get(&cpu.read_byte_and_increment(&mut bus))
+        .unwrap();
     if let Instruction::LDA(mode, time) = instr {
         let cycles = instruction_func::lda(&mut cpu, &mut bus, mode, *time);
         assert_eq!(cpu.a, 0x44);
@@ -1944,14 +2041,15 @@ fn lda_imm_test() {
     }
 }
 
-
 #[test]
 fn lda_zp_test() {
     let (mut cpu, mut bus) = generate_cpu_and_bus();
-    bus.write(0x0040, 0x44);  // M[0x0040] <- 0x4
-    bus.write(0, 0xA5); // LDA 
+    bus.write(0x0040, 0x44); // M[0x0040] <- 0x4
+    bus.write(0, 0xA5); // LDA
     bus.write(1, 0x40);
-    let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut bus)).unwrap();
+    let instr = INSTRUCTION_TABLE
+        .get(&cpu.read_byte_and_increment(&mut bus))
+        .unwrap();
     if let Instruction::LDA(mode, time) = instr {
         let cycles = instruction_func::lda(&mut cpu, &mut bus, mode, *time);
         assert_eq!(cpu.a, 0x44);
@@ -1963,15 +2061,16 @@ fn lda_zp_test() {
     }
 }
 
-
 #[test]
 fn lda_zpx_test() {
     let (mut cpu, mut bus) = generate_cpu_and_bus();
-    bus.write(0x0040, 0x44);  // M[0x0040] <- 0x4
+    bus.write(0x0040, 0x44); // M[0x0040] <- 0x4
     bus.write(0, 0xB5);
     bus.write(1, 0x3F);
     cpu.x = 1;
-    let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut bus)).unwrap();
+    let instr = INSTRUCTION_TABLE
+        .get(&cpu.read_byte_and_increment(&mut bus))
+        .unwrap();
     if let Instruction::LDA(mode, time) = instr {
         let cycles = instruction_func::lda(&mut cpu, &mut bus, mode, *time);
         assert_eq!(cpu.a, 0x44);
@@ -1982,7 +2081,6 @@ fn lda_zpx_test() {
         panic!("Wrong instruction, got {:?}", instr);
     }
 }
-
 
 #[test]
 fn lda_abs_test() {
@@ -1991,7 +2089,9 @@ fn lda_abs_test() {
     bus.write(0, 0xAD);
     bus.write(1, 0x40);
     bus.write(2, 0x01);
-    let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut bus)).unwrap();
+    let instr = INSTRUCTION_TABLE
+        .get(&cpu.read_byte_and_increment(&mut bus))
+        .unwrap();
     if let Instruction::LDA(mode, time) = instr {
         let cycles = instruction_func::lda(&mut cpu, &mut bus, mode, *time);
         assert_eq!(cpu.a, 0x44);
@@ -2002,7 +2102,6 @@ fn lda_abs_test() {
         panic!("Wrong instruction, got {:?}", instr);
     }
 }
-
 
 #[test]
 fn lda_absx_test_same_page() {
@@ -2012,7 +2111,9 @@ fn lda_absx_test_same_page() {
     bus.write(1, 0x3F);
     bus.write(2, 0x01);
     cpu.x = 0x01;
-    let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut bus)).unwrap();
+    let instr = INSTRUCTION_TABLE
+        .get(&cpu.read_byte_and_increment(&mut bus))
+        .unwrap();
     if let Instruction::LDA(mode, time) = instr {
         let cycles = instruction_func::lda(&mut cpu, &mut bus, mode, *time);
         assert_eq!(cpu.a, 0x44);
@@ -2023,7 +2124,6 @@ fn lda_absx_test_same_page() {
         panic!("Wrong instruction, got {:?}", instr);
     }
 }
-
 
 #[test]
 fn lda_absx_test_diff_page() {
@@ -2033,7 +2133,9 @@ fn lda_absx_test_diff_page() {
     bus.write(1, 0xC1);
     bus.write(2, 0x00);
     cpu.x = 0x7F;
-    let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut bus)).unwrap();
+    let instr = INSTRUCTION_TABLE
+        .get(&cpu.read_byte_and_increment(&mut bus))
+        .unwrap();
     if let Instruction::LDA(mode, time) = instr {
         let cycles = instruction_func::lda(&mut cpu, &mut bus, mode, *time);
         assert_eq!(cpu.a, 0x44);
@@ -2045,7 +2147,6 @@ fn lda_absx_test_diff_page() {
     }
 }
 
-
 #[test]
 fn lda_absy_test_same_page() {
     let (mut cpu, mut bus) = generate_cpu_and_bus();
@@ -2054,7 +2155,9 @@ fn lda_absy_test_same_page() {
     bus.write(1, 0x3F);
     bus.write(2, 0x01);
     cpu.y = 0x01;
-    let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut bus)).unwrap();
+    let instr = INSTRUCTION_TABLE
+        .get(&cpu.read_byte_and_increment(&mut bus))
+        .unwrap();
     if let Instruction::LDA(mode, time) = instr {
         let cycles = instruction_func::lda(&mut cpu, &mut bus, mode, *time);
         assert_eq!(cpu.a, 0x44);
@@ -2066,7 +2169,6 @@ fn lda_absy_test_same_page() {
     }
 }
 
-
 #[test]
 fn lda_absy_test_diff_page() {
     let (mut cpu, mut bus) = generate_cpu_and_bus();
@@ -2075,7 +2177,9 @@ fn lda_absy_test_diff_page() {
     bus.write(1, 0xC1);
     bus.write(2, 0x00);
     cpu.y = 0x7F;
-    let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut bus)).unwrap();
+    let instr = INSTRUCTION_TABLE
+        .get(&cpu.read_byte_and_increment(&mut bus))
+        .unwrap();
     if let Instruction::LDA(mode, time) = instr {
         let cycles = instruction_func::lda(&mut cpu, &mut bus, mode, *time);
         assert_eq!(cpu.a, 0x44);
@@ -2086,7 +2190,6 @@ fn lda_absy_test_diff_page() {
         panic!("Wrong instruction, got {:?}", instr);
     }
 }
-
 
 #[test]
 fn lda_idx_in_test() {
@@ -2097,7 +2200,9 @@ fn lda_idx_in_test() {
     bus.write(0xFE, 0x40);
     bus.write(0xFF, 0x01);
     cpu.x = 1;
-    let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut bus)).unwrap();
+    let instr = INSTRUCTION_TABLE
+        .get(&cpu.read_byte_and_increment(&mut bus))
+        .unwrap();
     if let Instruction::LDA(mode, time) = instr {
         let cycles = instruction_func::lda(&mut cpu, &mut bus, mode, *time);
         assert_eq!(cpu.a, 0x44);
@@ -2107,9 +2212,7 @@ fn lda_idx_in_test() {
     } else {
         panic!("Wrong instruction, got {:?}", instr);
     }
-    
 }
-
 
 #[test]
 fn lda_in_idx_same_page_test() {
@@ -2120,7 +2223,9 @@ fn lda_in_idx_same_page_test() {
     bus.write(0xFE, 0x3F);
     bus.write(0xFF, 0x01);
     cpu.y = 1;
-    let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut bus)).unwrap();
+    let instr = INSTRUCTION_TABLE
+        .get(&cpu.read_byte_and_increment(&mut bus))
+        .unwrap();
     if let Instruction::LDA(mode, time) = instr {
         let cycles = instruction_func::lda(&mut cpu, &mut bus, mode, *time);
         assert_eq!(cpu.a, 0x44);
@@ -2132,7 +2237,6 @@ fn lda_in_idx_same_page_test() {
     }
 }
 
-
 #[test]
 fn lda_in_idx_diff_page_test() {
     let (mut cpu, mut bus) = generate_cpu_and_bus();
@@ -2142,7 +2246,9 @@ fn lda_in_idx_diff_page_test() {
     bus.write(0xFE, 0xC1);
     bus.write(0xFF, 0x00);
     cpu.y = 0x7F;
-    let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut bus)).unwrap();
+    let instr = INSTRUCTION_TABLE
+        .get(&cpu.read_byte_and_increment(&mut bus))
+        .unwrap();
     if let Instruction::LDA(mode, time) = instr {
         let cycles = instruction_func::lda(&mut cpu, &mut bus, mode, *time);
         assert_eq!(cpu.a, 0x44);
@@ -2154,13 +2260,14 @@ fn lda_in_idx_diff_page_test() {
     }
 }
 
-
 #[test]
 fn lda_imm_zero_test() {
     let (mut cpu, mut bus) = generate_cpu_and_bus();
     bus.write(0, 0xA9);
     bus.write(1, 0x00);
-    let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut bus)).unwrap();
+    let instr = INSTRUCTION_TABLE
+        .get(&cpu.read_byte_and_increment(&mut bus))
+        .unwrap();
     if let Instruction::LDA(mode, time) = instr {
         let cycles = instruction_func::lda(&mut cpu, &mut bus, mode, *time);
         assert_eq!(cpu.a, 0x00);
@@ -2172,13 +2279,14 @@ fn lda_imm_zero_test() {
     }
 }
 
-
 #[test]
 fn lda_imm_neg_test() {
     let (mut cpu, mut bus) = generate_cpu_and_bus();
     bus.write(0, 0xA9);
     bus.write(1, 0x80);
-    let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut bus)).unwrap();
+    let instr = INSTRUCTION_TABLE
+        .get(&cpu.read_byte_and_increment(&mut bus))
+        .unwrap();
     if let Instruction::LDA(mode, time) = instr {
         let cycles = instruction_func::lda(&mut cpu, &mut bus, mode, *time);
         assert_eq!(cpu.a, 0x80);
@@ -2190,13 +2298,14 @@ fn lda_imm_neg_test() {
     }
 }
 
-
 #[test]
 fn lsr_acc_test() {
     let (mut cpu, mut bus) = generate_cpu_and_bus();
     bus.write(0, 0x4A);
     cpu.a = 0x02;
-    let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut bus)).unwrap();
+    let instr = INSTRUCTION_TABLE
+        .get(&cpu.read_byte_and_increment(&mut bus))
+        .unwrap();
     if let Instruction::LSR(mode, time) = instr {
         let cycles = instruction_func::lsr(&mut cpu, &mut bus, mode, *time);
         assert_eq!(cpu.a, 0x01);
@@ -2209,13 +2318,14 @@ fn lsr_acc_test() {
     }
 }
 
-
 #[test]
 fn lsr_acc_carry_and_zero_test() {
     let (mut cpu, mut bus) = generate_cpu_and_bus();
     bus.write(0, 0x4A);
     cpu.a = 0x01;
-    let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut bus)).unwrap();
+    let instr = INSTRUCTION_TABLE
+        .get(&cpu.read_byte_and_increment(&mut bus))
+        .unwrap();
     if let Instruction::LSR(mode, time) = instr {
         let cycles = instruction_func::lsr(&mut cpu, &mut bus, mode, *time);
         assert_eq!(cpu.a, 0x00);
@@ -2228,7 +2338,6 @@ fn lsr_acc_carry_and_zero_test() {
     }
 }
 
-
 #[test]
 fn lsr_abs_test() {
     let (mut cpu, mut bus) = generate_cpu_and_bus();
@@ -2236,7 +2345,9 @@ fn lsr_abs_test() {
     bus.write(1, 0x40);
     bus.write(2, 0x01);
     bus.write(0x0140, 0x02);
-    let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut bus)).unwrap();
+    let instr = INSTRUCTION_TABLE
+        .get(&cpu.read_byte_and_increment(&mut bus))
+        .unwrap();
     if let Instruction::LSR(mode, time) = instr {
         let cycles = instruction_func::lsr(&mut cpu, &mut bus, mode, *time);
         assert_eq!(bus.read(0x0140), 0x01);
@@ -2249,14 +2360,15 @@ fn lsr_abs_test() {
     }
 }
 
-
 #[test]
 fn ora_imm_test() {
     let (mut cpu, mut bus) = generate_cpu_and_bus();
     bus.write(0, 0x09);
     bus.write(1, 0x7F);
     cpu.a = 0x00;
-    let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut bus)).unwrap();
+    let instr = INSTRUCTION_TABLE
+        .get(&cpu.read_byte_and_increment(&mut bus))
+        .unwrap();
     if let Instruction::ORA(mode, time) = instr {
         let cycles = instruction_func::ora(&mut cpu, &mut bus, mode, *time);
         assert_eq!(cpu.a, 0x7f);
@@ -2268,14 +2380,15 @@ fn ora_imm_test() {
     }
 }
 
-
 #[test]
 fn ora_imm_zero_test() {
     let (mut cpu, mut bus) = generate_cpu_and_bus();
     bus.write(0, 0x09);
     bus.write(1, 0x00);
     cpu.a = 0x00;
-    let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut bus)).unwrap();
+    let instr = INSTRUCTION_TABLE
+        .get(&cpu.read_byte_and_increment(&mut bus))
+        .unwrap();
     if let Instruction::ORA(mode, time) = instr {
         let cycles = instruction_func::ora(&mut cpu, &mut bus, mode, *time);
         assert_eq!(cpu.a, 0x00);
@@ -2287,14 +2400,15 @@ fn ora_imm_zero_test() {
     }
 }
 
-
 #[test]
 fn ora_imm_neg_test() {
     let (mut cpu, mut bus) = generate_cpu_and_bus();
     bus.write(0, 0x09);
     bus.write(1, 0x0F);
     cpu.a = 0xF0;
-    let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut bus)).unwrap();
+    let instr = INSTRUCTION_TABLE
+        .get(&cpu.read_byte_and_increment(&mut bus))
+        .unwrap();
     if let Instruction::ORA(mode, time) = instr {
         let cycles = instruction_func::ora(&mut cpu, &mut bus, mode, *time);
         assert_eq!(cpu.a, 0xFF);
@@ -2306,13 +2420,14 @@ fn ora_imm_neg_test() {
     }
 }
 
-
 #[test]
 fn rol_acc_test() {
     let (mut cpu, mut bus) = generate_cpu_and_bus();
     bus.write(0, 0x2A);
     cpu.a = 0x01;
-    let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut bus)).unwrap();
+    let instr = INSTRUCTION_TABLE
+        .get(&cpu.read_byte_and_increment(&mut bus))
+        .unwrap();
     if let Instruction::ROL(mode, time) = instr {
         let cycles = instruction_func::rol(&mut cpu, &mut bus, mode, *time);
         assert_eq!(cpu.a, 0x02);
@@ -2325,13 +2440,14 @@ fn rol_acc_test() {
     }
 }
 
-
 #[test]
 fn rol_acc_carry_and_zero_test() {
     let (mut cpu, mut bus) = generate_cpu_and_bus();
     bus.write(0, 0x2A);
     cpu.a = 0x80;
-    let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut bus)).unwrap();
+    let instr = INSTRUCTION_TABLE
+        .get(&cpu.read_byte_and_increment(&mut bus))
+        .unwrap();
     if let Instruction::ROL(mode, time) = instr {
         let cycles = instruction_func::rol(&mut cpu, &mut bus, mode, *time);
         assert_eq!(cpu.a, 0x00);
@@ -2344,13 +2460,14 @@ fn rol_acc_carry_and_zero_test() {
     }
 }
 
-
 #[test]
 fn rol_acc_neg_test() {
     let (mut cpu, mut bus) = generate_cpu_and_bus();
     bus.write(0, 0x2A);
     cpu.a = 0x40;
-    let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut bus)).unwrap();
+    let instr = INSTRUCTION_TABLE
+        .get(&cpu.read_byte_and_increment(&mut bus))
+        .unwrap();
     if let Instruction::ROL(mode, time) = instr {
         let cycles = instruction_func::rol(&mut cpu, &mut bus, mode, *time);
         assert_eq!(cpu.a, 0x80);
@@ -2363,14 +2480,15 @@ fn rol_acc_neg_test() {
     }
 }
 
-
 #[test]
 fn rol_acc_with_carry_test() {
     let (mut cpu, mut bus) = generate_cpu_and_bus();
     bus.write(0, 0x2A);
     cpu.p.c = true;
     cpu.a = 0x01;
-    let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut bus)).unwrap();
+    let instr = INSTRUCTION_TABLE
+        .get(&cpu.read_byte_and_increment(&mut bus))
+        .unwrap();
     if let Instruction::ROL(mode, time) = instr {
         let cycles = instruction_func::rol(&mut cpu, &mut bus, mode, *time);
         assert_eq!(cpu.a, 0x03);
@@ -2383,7 +2501,6 @@ fn rol_acc_with_carry_test() {
     }
 }
 
-
 #[test]
 fn rol_abs_test() {
     let (mut cpu, mut bus) = generate_cpu_and_bus();
@@ -2391,7 +2508,9 @@ fn rol_abs_test() {
     bus.write(1, 0x40);
     bus.write(2, 0x01);
     bus.write(0x0140, 0x01);
-    let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut bus)).unwrap();
+    let instr = INSTRUCTION_TABLE
+        .get(&cpu.read_byte_and_increment(&mut bus))
+        .unwrap();
     if let Instruction::ROL(mode, time) = instr {
         let cycles = instruction_func::rol(&mut cpu, &mut bus, mode, *time);
         assert_eq!(bus.read(0x0140), 0x02);
@@ -2404,13 +2523,14 @@ fn rol_abs_test() {
     }
 }
 
-
 #[test]
 fn ror_acc_test() {
     let (mut cpu, mut bus) = generate_cpu_and_bus();
     bus.write(0, 0x6A);
     cpu.a = 0x02;
-    let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut bus)).unwrap();
+    let instr = INSTRUCTION_TABLE
+        .get(&cpu.read_byte_and_increment(&mut bus))
+        .unwrap();
     if let Instruction::ROR(mode, time) = instr {
         let cycles = instruction_func::ror(&mut cpu, &mut bus, mode, *time);
         assert_eq!(cpu.a, 0x01);
@@ -2423,14 +2543,15 @@ fn ror_acc_test() {
     }
 }
 
-
 #[test]
 fn ror_acc_with_carry_test() {
     let (mut cpu, mut bus) = generate_cpu_and_bus();
     bus.write(0, 0x6A);
     cpu.a = 0x02;
     cpu.p.c = true;
-    let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut bus)).unwrap();
+    let instr = INSTRUCTION_TABLE
+        .get(&cpu.read_byte_and_increment(&mut bus))
+        .unwrap();
     if let Instruction::ROR(mode, time) = instr {
         let cycles = instruction_func::ror(&mut cpu, &mut bus, mode, *time);
         assert_eq!(cpu.a, 0x81);
@@ -2443,13 +2564,14 @@ fn ror_acc_with_carry_test() {
     }
 }
 
-
 #[test]
 fn ror_acc_carry_and_zero_test() {
     let (mut cpu, mut bus) = generate_cpu_and_bus();
     bus.write(0, 0x6A);
     cpu.a = 0x01;
-    let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut bus)).unwrap();
+    let instr = INSTRUCTION_TABLE
+        .get(&cpu.read_byte_and_increment(&mut bus))
+        .unwrap();
     if let Instruction::ROR(mode, time) = instr {
         let cycles = instruction_func::ror(&mut cpu, &mut bus, mode, *time);
         assert_eq!(cpu.a, 0x00);
@@ -2462,7 +2584,6 @@ fn ror_acc_carry_and_zero_test() {
     }
 }
 
-
 #[test]
 fn ror_abs_test() {
     let (mut cpu, mut bus) = generate_cpu_and_bus();
@@ -2470,7 +2591,9 @@ fn ror_abs_test() {
     bus.write(1, 0x40);
     bus.write(2, 0x01);
     bus.write(0x0140, 0x02);
-    let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut bus)).unwrap();
+    let instr = INSTRUCTION_TABLE
+        .get(&cpu.read_byte_and_increment(&mut bus))
+        .unwrap();
     if let Instruction::ROR(mode, time) = instr {
         let cycles = instruction_func::ror(&mut cpu, &mut bus, mode, *time);
         assert_eq!(bus.read(0x0140), 0x01);
@@ -2483,14 +2606,15 @@ fn ror_abs_test() {
     }
 }
 
-
 #[test]
 fn pha_test() {
     let (mut cpu, mut bus) = generate_cpu_and_bus();
     cpu.sp = 0xFF;
     cpu.a = 0xBE;
     bus.write(0, 0x48);
-    let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut bus)).unwrap();
+    let instr = INSTRUCTION_TABLE
+        .get(&cpu.read_byte_and_increment(&mut bus))
+        .unwrap();
     if let Instruction::PHA(mode, time) = instr {
         let cycles = instruction_func::pha(&mut cpu, &mut bus, mode, *time);
         assert_eq!(cycles, 3);
@@ -2501,7 +2625,6 @@ fn pha_test() {
     }
 }
 
-
 #[test]
 fn php_test() {
     let (mut cpu, mut bus) = generate_cpu_and_bus();
@@ -2509,7 +2632,9 @@ fn php_test() {
     cpu.p.n = true;
     cpu.p.c = true;
     bus.write(0, 0x08);
-    let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut bus)).unwrap();
+    let instr = INSTRUCTION_TABLE
+        .get(&cpu.read_byte_and_increment(&mut bus))
+        .unwrap();
     if let Instruction::PHP(mode, time) = instr {
         let cycles = instruction_func::php(&mut cpu, &mut bus, mode, *time);
         assert_eq!(cycles, 3);
@@ -2520,14 +2645,15 @@ fn php_test() {
     }
 }
 
-
 #[test]
 fn pla_test() {
     let (mut cpu, mut bus) = generate_cpu_and_bus();
     cpu.sp = 0xFE;
     bus.write(0x01FF, 0x7F);
     bus.write(0, 0x68);
-    let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut bus)).unwrap();
+    let instr = INSTRUCTION_TABLE
+        .get(&cpu.read_byte_and_increment(&mut bus))
+        .unwrap();
     if let Instruction::PLA(mode, time) = instr {
         let cycles = instruction_func::pla(&mut cpu, &mut bus, mode, *time);
         assert_eq!(cycles, 4);
@@ -2540,7 +2666,6 @@ fn pla_test() {
     }
 }
 
-
 #[test]
 fn pla_zero_test() {
     let (mut cpu, mut bus) = generate_cpu_and_bus();
@@ -2548,7 +2673,9 @@ fn pla_zero_test() {
     cpu.a = 0xFF;
     bus.write(0x01FF, 0x00);
     bus.write(0, 0x68);
-    let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut bus)).unwrap();
+    let instr = INSTRUCTION_TABLE
+        .get(&cpu.read_byte_and_increment(&mut bus))
+        .unwrap();
     if let Instruction::PLA(mode, time) = instr {
         let cycles = instruction_func::pla(&mut cpu, &mut bus, mode, *time);
         assert_eq!(cycles, 4);
@@ -2559,9 +2686,7 @@ fn pla_zero_test() {
     } else {
         panic!("Wrong instruction, got {:?}", instr);
     }
-    
 }
-
 
 #[test]
 fn pla_neg_test() {
@@ -2569,7 +2694,9 @@ fn pla_neg_test() {
     cpu.sp = 0xFE;
     bus.write(0x01FF, 0xFF);
     bus.write(0, 0x68);
-    let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut bus)).unwrap();
+    let instr = INSTRUCTION_TABLE
+        .get(&cpu.read_byte_and_increment(&mut bus))
+        .unwrap();
     if let Instruction::PLA(mode, time) = instr {
         let cycles = instruction_func::pla(&mut cpu, &mut bus, mode, *time);
         assert_eq!(cycles, 4);
@@ -2580,9 +2707,7 @@ fn pla_neg_test() {
     } else {
         panic!("Wrong instruction, got {:?}", instr);
     }
-    
 }
-
 
 #[test]
 fn plp_test() {
@@ -2590,7 +2715,9 @@ fn plp_test() {
     cpu.sp = 0xFE;
     bus.write(0x01FF, 0xFF);
     bus.write(0, 0x28);
-    let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut bus)).unwrap();
+    let instr = INSTRUCTION_TABLE
+        .get(&cpu.read_byte_and_increment(&mut bus))
+        .unwrap();
     if let Instruction::PLP(mode, time) = instr {
         let cycles = instruction_func::plp(&mut cpu, &mut bus, mode, *time);
         assert_eq!(cycles, 4);
@@ -2607,7 +2734,6 @@ fn plp_test() {
     }
 }
 
-
 #[test]
 fn rts_test() {
     let (mut cpu, mut bus) = generate_cpu_and_bus();
@@ -2615,7 +2741,9 @@ fn rts_test() {
     bus.write(0x01FF, 0x42);
     bus.write(0x01FE, 0x02);
     cpu.sp = 0xFD;
-    let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut bus)).unwrap();
+    let instr = INSTRUCTION_TABLE
+        .get(&cpu.read_byte_and_increment(&mut bus))
+        .unwrap();
     if let Instruction::RTS(mode, time) = instr {
         let cycles = instruction_func::rts(&mut cpu, &mut bus, mode, *time);
         assert_eq!(cycles, 6);
@@ -2626,7 +2754,6 @@ fn rts_test() {
     }
 }
 
-
 #[test]
 fn rti_test() {
     let (mut cpu, mut bus) = generate_cpu_and_bus();
@@ -2635,7 +2762,9 @@ fn rti_test() {
     bus.write(0x01FE, 0x02);
     bus.write(0x01FD, 0xFF);
     cpu.sp = 0xFC;
-    let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut bus)).unwrap();
+    let instr = INSTRUCTION_TABLE
+        .get(&cpu.read_byte_and_increment(&mut bus))
+        .unwrap();
     if let Instruction::RTI(mode, time) = instr {
         let cycles = instruction_func::rti(&mut cpu, &mut bus, mode, *time);
         assert_eq!(cycles, 6);
@@ -2653,7 +2782,6 @@ fn rti_test() {
     }
 }
 
-
 #[test]
 fn sta_zp_test() {
     let (mut cpu, mut bus) = generate_cpu_and_bus();
@@ -2662,7 +2790,9 @@ fn sta_zp_test() {
     bus.write(2, 0x85); // STA $4
     bus.write(3, 0x40);
     cpu.instruction_cycle(&mut bus); // execte the LDA instruction
-    let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut bus)).unwrap();
+    let instr = INSTRUCTION_TABLE
+        .get(&cpu.read_byte_and_increment(&mut bus))
+        .unwrap();
     if let Instruction::STA(mode, time) = instr {
         let cycles = instruction_func::sta(&mut cpu, &mut bus, mode, *time);
         assert_eq!(cpu.a, 0x44);
@@ -2673,14 +2803,15 @@ fn sta_zp_test() {
     }
 }
 
-
 #[test]
 fn stx_zp_test() {
     let (mut cpu, mut bus) = generate_cpu_and_bus();
     bus.write(0, 0x86); // STX $4
     bus.write(1, 0x40);
     cpu.x = 0x44;
-    let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut bus)).unwrap();
+    let instr = INSTRUCTION_TABLE
+        .get(&cpu.read_byte_and_increment(&mut bus))
+        .unwrap();
     if let Instruction::STX(mode, time) = instr {
         let cycles = instruction_func::stx(&mut cpu, &mut bus, mode, *time);
         assert_eq!(bus.read(0x0040), 0x44);
@@ -2688,14 +2819,15 @@ fn stx_zp_test() {
     }
 }
 
-
 #[test]
 fn sty_zp_test() {
     let (mut cpu, mut bus) = generate_cpu_and_bus();
     bus.write(0, 0x84); // STY $4
     bus.write(1, 0x40);
     cpu.y = 0x44;
-    let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut bus)).unwrap();
+    let instr = INSTRUCTION_TABLE
+        .get(&cpu.read_byte_and_increment(&mut bus))
+        .unwrap();
     if let Instruction::STY(mode, time) = instr {
         let cycles = instruction_func::sty(&mut cpu, &mut bus, mode, *time);
         assert_eq!(bus.read(0x0040), 0x44);
@@ -2703,14 +2835,15 @@ fn sty_zp_test() {
     }
 }
 
-
 #[test]
 fn sbc_imm_test_no_carry_no_overflow() {
     let (mut cpu, mut bus) = generate_cpu_and_bus();
     bus.write(0, 0xE9);
     bus.write(1, 0x30);
     cpu.a = 0x50;
-    let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut bus)).unwrap();
+    let instr = INSTRUCTION_TABLE
+        .get(&cpu.read_byte_and_increment(&mut bus))
+        .unwrap();
     if let Instruction::SBC(mode, time) = instr {
         let cycles = instruction_func::sbc(&mut cpu, &mut bus, mode, *time);
         assert_eq!(cpu.a, 0x1F);
@@ -2724,14 +2857,15 @@ fn sbc_imm_test_no_carry_no_overflow() {
     }
 }
 
-
 #[test]
 fn sbc_imm_test_zero() {
     let (mut cpu, mut bus) = generate_cpu_and_bus();
     bus.write(0, 0xE9);
     bus.write(1, 0x01);
     cpu.a = 0x02;
-    let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut bus)).unwrap();
+    let instr = INSTRUCTION_TABLE
+        .get(&cpu.read_byte_and_increment(&mut bus))
+        .unwrap();
     if let Instruction::SBC(mode, time) = instr {
         let cycles = instruction_func::sbc(&mut cpu, &mut bus, mode, *time);
         assert_eq!(cpu.a, 0x00);
@@ -2745,14 +2879,15 @@ fn sbc_imm_test_zero() {
     }
 }
 
-
 #[test]
 fn sbc_imm_test_neg() {
     let (mut cpu, mut bus) = generate_cpu_and_bus();
     bus.write(0, 0xE9);
     bus.write(1, 0x30);
     cpu.a = 0xD0;
-    let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut bus)).unwrap();
+    let instr = INSTRUCTION_TABLE
+        .get(&cpu.read_byte_and_increment(&mut bus))
+        .unwrap();
     if let Instruction::SBC(mode, time) = instr {
         let cycles = instruction_func::sbc(&mut cpu, &mut bus, mode, *time); // will do 1 + -2
         assert_eq!(cpu.a, 0x9F);
@@ -2766,14 +2901,15 @@ fn sbc_imm_test_neg() {
     }
 }
 
-
 #[test]
 fn sbc_imm_test_no_carry_overflow() {
     let (mut cpu, mut bus) = generate_cpu_and_bus();
     bus.write(0, 0xE9);
     bus.write(1, 0x70);
     cpu.a = 0xD0;
-    let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut bus)).unwrap();
+    let instr = INSTRUCTION_TABLE
+        .get(&cpu.read_byte_and_increment(&mut bus))
+        .unwrap();
     if let Instruction::SBC(mode, time) = instr {
         let cycles = instruction_func::sbc(&mut cpu, &mut bus, mode, *time);
         assert_eq!(cpu.a, 0x5F);
@@ -2787,14 +2923,15 @@ fn sbc_imm_test_no_carry_overflow() {
     }
 }
 
-
 #[test]
 fn sbc_imm_test_carry_no_overflow() {
     let (mut cpu, mut bus) = generate_cpu_and_bus();
     bus.write(0, 0xE9);
     bus.write(1, 0xF0);
     cpu.a = 0xD0;
-    let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut bus)).unwrap();
+    let instr = INSTRUCTION_TABLE
+        .get(&cpu.read_byte_and_increment(&mut bus))
+        .unwrap();
     if let Instruction::SBC(mode, time) = instr {
         let cycles = instruction_func::sbc(&mut cpu, &mut bus, mode, *time);
         assert_eq!(cpu.a, 0xDF);
@@ -2808,14 +2945,15 @@ fn sbc_imm_test_carry_no_overflow() {
     }
 }
 
-
 #[test]
 fn sbc_imm_test_carry_overflow() {
     let (mut cpu, mut bus) = generate_cpu_and_bus();
     bus.write(0, 0xE9);
     bus.write(1, 0xB0);
     cpu.a = 0x50;
-    let instr = INSTRUCTION_TABLE.get(&cpu.read_byte_and_increment(&mut bus)).unwrap();
+    let instr = INSTRUCTION_TABLE
+        .get(&cpu.read_byte_and_increment(&mut bus))
+        .unwrap();
     if let Instruction::SBC(mode, time) = instr {
         let cycles = instruction_func::sbc(&mut cpu, &mut bus, mode, *time);
         assert_eq!(cpu.a, 0x9F);

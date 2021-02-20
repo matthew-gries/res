@@ -1,6 +1,6 @@
 use crate::core::bus::CPUBus;
-use crate::core::instruction::Instruction;
 use crate::core::instruction::instruction_func;
+use crate::core::instruction::Instruction;
 use crate::core::instruction::INSTRUCTION_TABLE;
 
 /// Structure for handling the status register of the CPU
@@ -18,28 +18,27 @@ pub struct StatusRegister {
     /// The zero flag (bit 1)
     pub z: bool,
     /// The carry flag (bit 0)
-    pub c: bool
+    pub c: bool,
 }
 
 impl StatusRegister {
-
     /// Construct a new status register object
-    /// 
+    ///
     /// Return (`StatusRegister`): the new status register object
     pub fn new() -> Self {
-        StatusRegister{
+        StatusRegister {
             n: false,
             v: false,
             b: false,
             d: false,
             i: false,
             z: false,
-            c: false
+            c: false,
         }
     }
 
     /// Convert the fields of the status register into an unsigned 8-bit number
-    /// 
+    ///
     /// Return (`u8`): this status register object as an 8-bit number, with each bit corresponding to a
     /// flag
     pub fn as_u8(&self) -> u8 {
@@ -56,8 +55,8 @@ impl StatusRegister {
 
     /// Convert an unsigned 8-bit number into the flags of the status register.
     /// Bit 5 of the number is unused
-    /// 
-    /// Arguments: 
+    ///
+    /// Arguments:
     /// * `flags` (`u8`): the 8-bit number to use
     pub fn from_u8(&mut self, flags: u8) {
         self.c = (flags & 0b1u8) != 0;
@@ -72,7 +71,7 @@ impl StatusRegister {
 
 /// The bus page in which the stack is located. The stack is located from
 /// 0x0100 to 0x01FF
-const STACK_bus_PAGE: u16 = 0x0100;
+const STACK_MEM_PAGE: u16 = 0x0100;
 
 /// Structure to represent the CPU of the NES system
 pub struct CPU {
@@ -89,27 +88,33 @@ pub struct CPU {
     /// The status register
     pub p: StatusRegister,
     /// `true` if the PPU is already in VBlank, `false` if the PPU is not already in VBlank
-    is_ppu_already_in_vblank: bool
+    is_ppu_already_in_vblank: bool,
 }
 
 impl CPU {
-
     /// Create a new CPU with all fields zeroed
-    /// 
+    ///
     /// Return (`CPU`): a new CPU object
     pub fn new() -> Self {
-        CPU{a: 0, x:0, y: 0, sp: 0, pc: 0, p: StatusRegister::new(), is_ppu_already_in_vblank: false}
+        CPU {
+            a: 0,
+            x: 0,
+            y: 0,
+            sp: 0,
+            pc: 0,
+            p: StatusRegister::new(),
+            is_ppu_already_in_vblank: false,
+        }
     }
 
     /// Perform a reset interrupt request, which involves setting the program counter to the
     /// value stored in 0xFFFC and 0xFFFD
-    /// 
-    /// Arguments: 
+    ///
+    /// Arguments:
     /// * `bus` (`CPUBus`): the system bus to use with this CPU
-    /// 
+    ///
     /// Return (`u8`): the number of cycles this operation takes
     pub fn reset(&mut self, bus: &mut CPUBus) -> usize {
-
         // Values come from Visual6502 simulator.
         self.a = 0;
         self.x = 0;
@@ -125,13 +130,12 @@ impl CPU {
 
     /// Perform an interrupt request, which involves pushing the low and high bytes of the PC on the stack, the
     /// processor flags on the stack, disabling interrupts and setting the PC to the value stored in 0xFFFE/0xFFFF
-    /// 
-    /// Arguments: 
+    ///
+    /// Arguments:
     /// * `bus` (`CPUBus`): the system bus to use with this CPU
-    /// 
+    ///
     /// Return (`u8`): the number of cycles this operation takes
     pub fn irq(&mut self, bus: &mut CPUBus) -> usize {
-
         if !self.p.i {
             let pc_low = (self.pc & 0x00FF) as u8;
             let pc_high = ((self.pc & 0xFF) >> 8) as u8;
@@ -156,13 +160,12 @@ impl CPU {
 
     /// Perform a non-maskable interrupt, which involves pushing the low and high bytes of the PC on the stack, the
     /// processor flags on the stack, disabling interrupts and setting the PC to the value stored in 0xFFFA/0xFFFB
-    /// 
-    /// Arguments: 
+    ///
+    /// Arguments:
     /// * `bus` (`CPUBus`): the system bus to use with this CPU
-    /// 
+    ///
     /// Return (`u8`): the number of cycles this operation takes
     pub fn nmi(&mut self, bus: &mut CPUBus) -> usize {
-
         let pc_low = (self.pc & 0x00FF) as u8;
         let pc_high = ((self.pc & 0xFF) >> 8) as u8;
         self.push_stack(bus, pc_low);
@@ -182,14 +185,14 @@ impl CPU {
     }
 
     /// Push a value onto the stack
-    /// 
-    /// Argument: 
+    ///
+    /// Argument:
     /// * `bus` (`CPUBus`): the system bus to use with this CPU
     /// * `val` (`u8`): the value to push on the stack
-    /// 
+    ///
     /// Return (`&Self`): a reference to this CPU
     pub fn push_stack(&mut self, bus: &mut CPUBus, val: u8) -> &Self {
-        let stack_addr = STACK_bus_PAGE + self.sp as u16;
+        let stack_addr = STACK_MEM_PAGE + self.sp as u16;
 
         bus.write(stack_addr, val);
 
@@ -205,10 +208,10 @@ impl CPU {
 
     /// Retrieve the value at the top of the stack. The value is not deleted from
     /// bus
-    /// 
-    /// Arguments: 
+    ///
+    /// Arguments:
     /// * `bus` (`CPUBus`): the system bus to use with this CPU
-    /// 
+    ///
     /// Return (`u8`): the value popped from the stack
     pub fn pop_stack(&mut self, bus: &mut CPUBus) -> u8 {
         let (new_stack_addr, overflowed) = self.sp.overflowing_add(1);
@@ -216,27 +219,27 @@ impl CPU {
         if overflowed {
             log::warn!("Stack overflow detected");
         }
-        let stack_addr = STACK_bus_PAGE + self.sp as u16;
-        
+        let stack_addr = STACK_MEM_PAGE + self.sp as u16;
+
         // we know reading from the stack is aways valid, so just unwrap
         bus.read(stack_addr) // value at the address is NOT deleted when SP moves
     }
 
     /// Check if the given unsigned value is negative in two's complement
-    /// 
-    /// Arguments: 
+    ///
+    /// Arguments:
     /// * `val` (`u8`): the value to check
-    /// 
+    ///
     /// Return (`bool`): `true` if the value is negative in two's complement, `false` otherwise.
     pub fn check_if_neg(val: u8) -> bool {
         (val >> 7) == 1
     }
 
     /// Get the byte at the PC and increment the PC by 1
-    /// 
-    /// Arguments: 
+    ///
+    /// Arguments:
     /// * `bus` (`CPUBus`): the system bus to use with this CPU
-    /// 
+    ///
     /// Return (`u8`): the byte read at the address
     pub fn read_byte_and_increment(&mut self, bus: &mut CPUBus) -> u8 {
         let byte = bus.read(self.pc);
@@ -245,22 +248,21 @@ impl CPU {
     }
 
     /// Perform one fetch-decode-execute cycle
-    /// 
-    /// Arguments: 
+    ///
+    /// Arguments:
     /// * `bus` (`CPUBus`): the system bus to use with this CPU
     pub fn instruction_cycle(&mut self, bus: &mut CPUBus) {
-
         self.check_ppu_status_and_update(bus);
 
         let opcode = self.read_byte_and_increment(bus);
-	
+
         let instr = INSTRUCTION_TABLE.get(&opcode);
 
         println!("{:x}: {:x}", self.pc, opcode);
 
         let instr = match instr {
             Some(i) => i,
-            None => panic!("Invalid opcode {} was given!", opcode)
+            None => panic!("Invalid opcode {} was given!", opcode),
         };
 
         let mut cycles = match instr {
@@ -331,11 +333,10 @@ impl CPU {
 
 // helper functions
 impl CPU {
-
     /// Check the PPU status register flags and perform the necessary CPU operations. The PPU status register is zeroed when
     /// read
-    /// 
-    /// Arguments: 
+    ///
+    /// Arguments:
     /// * `bus` (`CPUBus`) : the bus to use
     fn check_ppu_status_and_update(&mut self, bus: &mut CPUBus) {
 
@@ -347,12 +348,11 @@ impl CPU {
     }
 
     /// Check the VBlank flag of the PPU status and perform an NMI. TODO when do we do an NMI?
-    /// 
+    ///
     /// Arguments:
     /// * `bus` (`CPUBus`): the bus the CPU reads from
     /// * `status` (`u8`): the PPU status flag
     fn check_vblank(&mut self, bus: &mut CPUBus, status: u8) {
-
         if Self::is_ppu_in_vblank(status) && !self.is_ppu_already_in_vblank {
             let mut cycles = self.nmi(bus);
             self.is_ppu_already_in_vblank = true;
